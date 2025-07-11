@@ -1,0 +1,45 @@
+- name: Install bind packages
+  package:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Deploy forward zone for example48.lab
+  template:
+    src: fwd.example48.lab.j2
+    dest: /var/named/fwd.example48.lab
+  notify: restart named
+
+- name: Deploy forward zone for site48.lab
+  template:
+    src: fwd.site48.lab.j2
+    dest: /var/named/fwd.site48.lab
+  notify: restart named
+
+- name: Deploy reverse zone
+  template:
+    src: named.16.172.j2
+    dest: /var/named/named.16.172
+  notify: restart named
+
+- name: Deploy zones.conf dynamically
+  template:
+    src: zones.conf.j2
+    dest: /etc/named/zones.conf
+  notify: restart named
+
+- name: Ensure zones.conf include is at the end of named.conf
+  lineinfile:
+    path: /etc/named.conf
+    line: 'include "/etc/named/zones.conf";'
+    insertafter: EOF
+    state: present
+  notify: restart named
+
+- name: Ensure named is running
+  service:
+    name: named
+    state: started
+    enabled: yes
+

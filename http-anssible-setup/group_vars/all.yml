@@ -1,0 +1,21 @@
+# group_vars/all.yml
+srv_ip: "172.16.30.48"
+cli_ip: "172.16.31.48"
+alias_ip: "172.16.32.48"
+domain_ex: "example48.lab"
+domain_site: "site48.lab"
+server_network: "172.16.30.0/24"
+alias_network: "172.16.32.0/24"
+client_network: "172.16.31.0/24"
+http_port: "80"
+https_port: "443"
+ns2_ip: "172.16.31.48"
+
+zones:
+  - name: "example48.lab"
+    file: "fwd.example48.lab"
+  - name: "site48.lab"
+    file: "fwd.site48.lab"
+  - name: "16.172.in-addr.arpa"
+    file: "named.16.172"
+

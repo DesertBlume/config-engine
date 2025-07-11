@@ -1,0 +1,6 @@
+srv:
+  children:
+    server:
+      hosts:
+        haja0013-SRV:
+          ansible_host: 172.16.30.48

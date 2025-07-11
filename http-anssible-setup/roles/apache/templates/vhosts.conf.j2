@@ -1,0 +1,18 @@
+<VirtualHost {{ srv_ip }}:80>
+  ServerName www.{{ domain_ex }}
+  DocumentRoot /var/www/vhosts/www.{{ domain_ex }}/html/
+</VirtualHost>
+
+<VirtualHost {{ srv_ip }}:80>
+  ServerName www.{{ domain_site }}
+  DocumentRoot /var/www/vhosts/www.{{ domain_site }}/html/
+</VirtualHost>
+
+<VirtualHost {{ alias_ip }}:443>
+  ServerName secure.{{ domain_ex }}
+  DocumentRoot /var/www/vhosts/secure.{{ domain_ex }}/html/
+  SSLEngine on
+  SSLCertificateFile /etc/httpd/tls/cert/{{ domain_ex }}.cert
+  SSLCertificateKeyFile /etc/httpd/tls/key/{{ domain_ex }}.key
+</VirtualHost>
+

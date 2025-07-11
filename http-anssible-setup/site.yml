@@ -1,0 +1,9 @@
+- name: Lab 6 full automation
+  hosts: srv
+  become: true
+
+  roles:
+    - bind
+    - apache
+    - firewall
+

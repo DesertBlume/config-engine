@@ -1,0 +1,272 @@
+=== ./group_vars/all.yml ===
+# group_vars/all.yml
+srv_ip: "172.16.30.48"
+cli_ip: "172.16.31.48"
+alias_ip: "172.16.32.48"
+domain_ex: "example48.lab"
+domain_site: "site48.lab"
+server_network: "172.16.30.0/24"
+alias_network: "172.16.32.0/24"
+client_network: "172.16.31.0/24"
+http_port: "80"
+https_port: "443"
+=== ./output.txt ===
+=== ./roles/bind/templates/fwd.example48.lab.j2 ===
+$TTL 86400
+$ORIGIN {{ domain_ex }}.
+
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex1 }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+        IN NS ns2.{{ domain_ex }}.
+
+ns1     IN A {{ srv_ip }}
+ns2     IN A {{ cli_ip }}
+ftp     IN A {{ alias_ip }}
+secure  IN A {{ srv_ip }}
+www     IN A {{ srv_ip }}
+=== ./roles/bind/templates/named.16.172.j2 ===
+$TTL 86400
+$ORIGIN 16.172.in-addr.arpa.
+
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex }}. (
+            20250710
+            28800
+            14400
+            604800
+            86400 )
+
+        IN NS   ns1.{{ domain_ex }}.
+        IN NS   ns2.{{ domain_ex }}.
+
+48.30   IN PTR ns1.{{ domain_ex }}.
+48.30   IN PTR www.{{ domain_ex }}.
+48.30   IN PTR www.{{ domain_site }}.
+48.31   IN PTR ns2.{{ domain_ex }}.
+48.32   IN PTR ftp.{{ domain_ex }}.
+48.32   IN PTR secure.{{ domain_ex }}.
+
+=== ./roles/bind/templates/fwd.site48.lab.j2 ===
+$TTL 86400
+$ORIGIN {{ domain_ex }}.
+
+@       IN SOA {{ domain_site }}. dnsadmin.{{ domain_site }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+
+
+ns1     IN A {{ srv_ip }}
+www     IN A {{ srv_ip }}
+
+=== ./roles/bind/tasks/main.yml ===
+- name: Install bind packages
+  package:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Deploy forward zone for example48.lab
+  template:
+    src: fwd.example48.lab.j2
+    dest: /var/named/fwd.example48.lab
+  notify: restart named
+
+- name: Deploy forward zone for site48.lab
+  template:
+    src: fwd.site48.lab.j2
+    dest: /var/named/fwd.site48.lab
+  notify: restart named
+
+- name: Deploy reverse zone
+  template:
+    src: named.16.172.j2
+    dest: /var/named/named.16.172
+  notify: restart named
+
+
+- name: Ensure named is running
+  service:
+    name: named
+    state: started
+    enabled: yes
+
+=== ./roles/bind/handlers/main.yml ===
+- name: restart named
+  service:
+    name: named
+    state: restarted
+
+=== ./roles/firewall/tasks/main.yml ===
+- name: Ensure iptables-services is installed
+  package:
+    name: iptables-services
+    state: present
+
+- name: Flush iptables rules
+  command: iptables -F
+   
+- name: Set iptables default policies to ACCEPT
+  command: iptables -P {{ item.chain }} ACCEPT
+  loop:
+    - { chain: 'INPUT' }
+    - { chain: 'FORWARD' }
+    - { chain: 'OUTPUT' }
+  
+- name: Allow TCP port {{ http_port }} from CLIENT network ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ client_network }}"
+    destination_port: "{{ http_port }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow TCP port {{ https_port }} from CLIENT network ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ client_network }}"
+    destination_port: "{{ https_port }}"
+    jump: ACCEPT
+    state: present
+
+- name: Deny TCP port {{ http_port }} from Server network ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ server_network }}"
+    destination_port: "{{ http_port }}"
+    jump: REJECT
+    state: present
+
+- name: Deny TCP port {{ http_port }} from Alias network ({{ alias_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ alias_network }}"
+    destination_port: "{{ http_port }}"
+    jump: REJECT
+    state: present
+
+- name: Deny TCP port {{ https_port }} from Server network ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ server_network }}"
+    destination_port: "{{ https_port }}"
+    jump: REJECT
+    state: present
+
+
+- name: Save iptables rules permanently (RHEL 8)
+  command: service iptables save
+
+- name: Enable and start iptables service
+  service:
+    name: iptables
+    enabled: true
+    state: started
+
+=== ./roles/apache/templates/vhosts.conf.j2 ===
+<VirtualHost {{ srv_ip }}:80>
+  ServerName www.{{ domain_ex }}
+  DocumentRoot /var/www/vhosts/www.{{ domain_ex }}/html/
+</VirtualHost>
+
+<VirtualHost {{ srv_ip }}:80>
+  ServerName www.{{ domain_site }}
+  DocumentRoot /var/www/vhosts/www.{{ domain_site }}/html/
+</VirtualHost>
+
+<VirtualHost {{ alias_ip }}:443>
+  ServerName secure.{{ domain_ex }}
+  DocumentRoot /var/www/vhosts/secure.{{ domain_ex }}/html/
+  SSLEngine on
+  SSLCertificateFile /etc/httpd/tls/cert/{{ domain_ex }}.cert
+  SSLCertificateKeyFile /etc/httpd/tls/key/{{ domain_ex }}.key
+</VirtualHost>
+
+=== ./roles/apache/tasks/main.yml ===
+- name: Install Apache
+  package:
+    name:
+      - httpd
+      - mod_ssl
+    state: present
+
+- name: Disable default ssl.conf
+  file:
+    path: /etc/httpd/conf.d/ssl.conf
+    state: absent
+
+- name: Deploy vhosts.conf
+  template:
+    src: vhosts.conf.j2
+    dest: /etc/httpd/conf.d/vhosts.conf
+  notify: restart httpd
+
+- name: Ensure Apache is running
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+
+=== ./roles/apache/handlers/main.yml ===
+- name: restart httpd
+  service:
+    name: httpd
+    state: restarted
+
+=== ./inventory/srv.yml ===
+srv:
+  children:
+    server:
+      hosts:
+        haja0013-SRV:
+          ansible_host: 172.16.30.48
+=== ./inventory/hosts.yml ===
+all:
+  children:
+    server:
+      hosts:
+        haja0013-SRV:
+          ansible_host: 172.16.30.48
+    client:
+      hosts:
+        haja0013-CTL:
+          ansible_host: 172.16.31.48
+
+=== ./ansible.cfg ===
+[defaults]
+inventory = inventory/srv.yml
+remote_user = root
+host_key_checking = False
+
+=== ./site.yml ===
+- name: Lab 6 full automation
+  hosts: srv
+  become: true
+
+  roles:
+    - bind
+    - apache
+    - ssl
+    - firewall
+
+=== ./all-cat.sh ===
+#!/bin/bash
+
+find . -type f -exec sh -c 'echo "=== {} ==="; cat "{}"' \; > output.txt
+
+tree

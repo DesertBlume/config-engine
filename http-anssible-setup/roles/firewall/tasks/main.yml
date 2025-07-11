@@ -1,0 +1,70 @@
+- name: Ensure iptables-services is installed
+  package:
+    name: iptables-services
+    state: present
+
+- name: Flush iptables rules
+  command: iptables -F
+   
+- name: Set iptables default policies to ACCEPT
+  command: iptables -P {{ item.chain }} ACCEPT
+  loop:
+    - { chain: 'INPUT' }
+    - { chain: 'FORWARD' }
+    - { chain: 'OUTPUT' }
+  
+- name: Allow TCP port {{ http_port }} from CLIENT network ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ client_network }}"
+    destination_port: "{{ http_port }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow TCP port {{ https_port }} from CLIENT network ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ client_network }}"
+    destination_port: "{{ https_port }}"
+    jump: ACCEPT
+    state: present
+
+- name: Deny TCP port {{ http_port }} from Server network ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ server_network }}"
+    destination_port: "{{ http_port }}"
+    jump: REJECT
+    state: present
+
+- name: Deny TCP port {{ http_port }} from Alias network ({{ alias_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ alias_network }}"
+    destination_port: "{{ http_port }}"
+    jump: REJECT
+    state: present
+
+- name: Deny TCP port {{ https_port }} from Server network ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ server_network }}"
+    destination_port: "{{ https_port }}"
+    jump: REJECT
+    state: present
+
+
+- name: Save iptables rules permanently (RHEL 8)
+  command: service iptables save
+
+- name: Enable and start iptables service
+  service:
+    name: iptables
+    enabled: true
+    state: started
+
