@@ -1,0 +1,28 @@
+- name: Install Postfix
+  package:
+    name: postfix
+    state: present
+
+- name: Configure Postfix main.cf
+  template:
+    src: "main.cf.j2"
+    dest: "/etc/postfix/main.cf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Postfix
+
+- name: Set up mail alias for 'geeks'
+  lineinfile:
+    path: "/etc/aliases"
+    create: yes
+    regexp: "^geeks:"
+    line: "geeks: cst8246"
+  notify: Rebuild aliases  # will trigger newaliases
+
+- name: Ensure Postfix is running and enabled
+  service:
+    name: postfix
+    state: started
+    enabled: yes
+

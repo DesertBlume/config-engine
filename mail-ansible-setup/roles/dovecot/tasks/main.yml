@@ -1,0 +1,85 @@
+- name: Install Dovecot IMAP server
+  package:
+    name: dovecot
+    state: present
+
+- name: Configure Dovecot mail directory settings (10-mail.conf)
+  template:
+    src: "dovecot-mail.conf.j2"
+    dest: "/etc/dovecot/conf.d/10-mail.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Dovecot
+
+- name: Configure Dovecot authentication settings (10-auth.conf)
+  template:
+    src: "dovecot-auth.conf.j2"
+    dest: "/etc/dovecot/conf.d/10-auth.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Dovecot
+
+- name: Deploy Dovecot master config
+  template:
+    src: dovecot-10-master.conf.j2
+    dest: /etc/dovecot/conf.d/10-master.conf
+  notify: Restart Dovecot
+  
+
+- name: Ensure mail users exist on system
+  user:
+    name: "{{ item }}"
+    state: present
+    create_home: yes
+    password: "{{ (item == 'desertblume') | ternary(desertblume_password_hash, omit) }}"
+  loop: "{{ mail_users }}"
+
+- name: Create Maildir for mail users
+  file:
+    path: "/home/{{ item }}/Maildir"
+    state: directory
+    owner: "{{ item if item != 'root' else 'root' }}"
+    group: "{{ item if item != 'root' else 'root' }}"
+    mode: "0700"
+  loop: "{{ mail_users }}"
+  when: item != 'root'  # (root's Maildir typically /root/Maildir, which we can handle separately)
+
+- name: Create Maildir subfolders (cur, new, tmp)
+  file:
+    path: "/home/{{ item.0 }}/Maildir/{{ item.1 }}"
+    state: directory
+    owner: "{{ item.0 }}"
+    group: "{{ item.0 }}"
+    mode: "0700"
+  with_nested:
+    - "{{ mail_users }}"
+    - ["cur", "new", "tmp"]
+  when: item.0 != 'root'
+
+
+  
+#- name: Create Maildir subfolders (cur, new, tmp) for {{ item }}
+#  file:
+#    path: "/home/{{ item }}/Maildir/{{ subdir }}"
+#    state: directory
+#    owner: "{{ item }}"
+#    group: "{{ item }}"
+#    mode: "0700"
+#  loop: "{{ mail_users }}"
+#  loop_control:
+#    loop_var: item
+#  vars:
+#    subdirs: ["cur", "new", "tmp"]
+#  with_nested:
+#    - "{{ mail_users }}"
+#   - "{{ subdirs }}"
+#  when: item != 'root'
+
+- name: Ensure Dovecot is running and enabled
+  service:
+    name: dovecot
+    state: started
+    enabled: yes
+

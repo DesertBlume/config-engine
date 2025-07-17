@@ -1,0 +1,6 @@
+# roles/roundcube/handlers/main.yml
+- name: Reload Apache
+  service:
+    name: httpd
+    state: reloaded
+

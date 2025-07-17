@@ -1,0 +1,6 @@
+# roles/dovecot/handlers/main.yml
+- name: Restart Dovecot
+  service:
+    name: dovecot
+    state: restarted
+

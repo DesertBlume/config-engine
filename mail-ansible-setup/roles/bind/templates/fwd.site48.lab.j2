@@ -1,0 +1,16 @@
+$TTL 86400
+$ORIGIN {{ domain_site }}.
+
+@       IN SOA {{ domain_site }}. dnsadmin.{{ domain_site }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+
+
+ns1     IN A {{ srv_ip }}
+www     IN A {{ srv_ip }}
+

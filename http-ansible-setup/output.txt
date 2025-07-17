@@ -10,12 +10,27 @@ alias_network: "172.16.32.0/24"
 client_network: "172.16.31.0/24"
 http_port: "80"
 https_port: "443"
+ns2_ip: "172.16.31.48"
+
+zones:
+  - name: "example48.lab"
+    file: "fwd.example48.lab"
+  - name: "site48.lab"
+    file: "fwd.site48.lab"
+  - name: "16.172.in-addr.arpa"
+    file: "named.16.172"
+
+=== ./reload.sh ===
+#!/bin/bash
+
+virsh shutdown linux-srv-vm
+virsh snapshot-revert --domain linux-srv-vm clean-srv-with-root
 === ./output.txt ===
 === ./roles/bind/templates/fwd.example48.lab.j2 ===
 $TTL 86400
 $ORIGIN {{ domain_ex }}.
 
-@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex1 }}. (
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex }}. (
                 2025071001
                 30
                 14400
@@ -28,7 +43,7 @@ $ORIGIN {{ domain_ex }}.
 ns1     IN A {{ srv_ip }}
 ns2     IN A {{ cli_ip }}
 ftp     IN A {{ alias_ip }}
-secure  IN A {{ srv_ip }}
+secure  IN A {{ alias_ip }}
 www     IN A {{ srv_ip }}
 === ./roles/bind/templates/named.16.172.j2 ===
 $TTL 86400
@@ -51,9 +66,23 @@ $ORIGIN 16.172.in-addr.arpa.
 48.32   IN PTR ftp.{{ domain_ex }}.
 48.32   IN PTR secure.{{ domain_ex }}.
 
+=== ./roles/bind/templates/zones.conf.j2 ===
+# Managed by Ansible - dynamic zones.conf
+
+{% for zone in zones %}
+zone "{{ zone.name }}" IN {
+  type master;
+  file "{{ zone.file }}";
+  allow-transfer { {{ ns2_ip }}; };  // allow zone transfers to slave
+  also-notify { {{ ns2_ip }}; };     // notify slave when zone changes
+  notify yes;
+  allow-update { none; };
+};
+{% endfor %}
+
 === ./roles/bind/templates/fwd.site48.lab.j2 ===
 $TTL 86400
-$ORIGIN {{ domain_ex }}.
+$ORIGIN {{ domain_site }}.
 
 @       IN SOA {{ domain_site }}. dnsadmin.{{ domain_site }}. (
                 2025071001
@@ -94,6 +123,19 @@ www     IN A {{ srv_ip }}
     dest: /var/named/named.16.172
   notify: restart named
 
+- name: Deploy zones.conf dynamically
+  template:
+    src: zones.conf.j2
+    dest: /etc/named/zones.conf
+  notify: restart named
+
+- name: Ensure zones.conf include is at the end of named.conf
+  lineinfile:
+    path: /etc/named.conf
+    line: 'include "/etc/named/zones.conf";'
+    insertafter: EOF
+    state: present
+  notify: restart named
 
 - name: Ensure named is running
   service:
@@ -216,6 +258,72 @@ www     IN A {{ srv_ip }}
     dest: /etc/httpd/conf.d/vhosts.conf
   notify: restart httpd
 
+- name: Ensure Listen 443 is in httpd.conf
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    line: 'Listen 443'
+    insertafter: '^Listen 80'
+    state: present
+  notify: restart httpd
+
+
+- name: Ensure TLS directories exist
+  file:
+    path: "/etc/httpd/tls/{{ item }}"
+    state: directory
+    mode: "{{ '0700' if item == 'key' else '0755' }}"
+  loop:
+    - key
+    - cert
+
+- name: Generate self-signed cert if not exists
+  command: >
+    openssl req -x509 -newkey rsa:2048 -days 365 -nodes
+    -keyout /etc/httpd/tls/key/{{ domain_ex }}.key
+    -out /etc/httpd/tls/cert/{{ domain_ex }}.cert
+    -subj "/C=CA/ST=ON/L=Ottawa/O=College/OU=IT/CN=secure.{{ domain_ex }}"
+  args:
+    creates: "/etc/httpd/tls/cert/{{ domain_ex }}.cert"
+
+- name: Set correct permissions for key
+  file:
+    path: "/etc/httpd/tls/key/{{ domain_ex }}.key"
+    mode: "0600"
+
+- name: Set correct permissions for cert
+  file:
+    path: "/etc/httpd/tls/cert/{{ domain_ex }}.cert"
+    mode: "0644"
+
+- name: Ensure vhost web root directories exist
+  file:
+    path: "/var/www/vhosts/{{ item }}/html"
+    state: directory
+    mode: '0755'
+    recurse: yes
+  loop:
+    - "www.{{ domain_ex }}"
+    - "www.{{ domain_site }}"
+    - "secure.{{ domain_ex }}"
+
+- name: Create index.html for each vhost
+  copy:
+    dest: "/var/www/vhosts/{{ item.name }}/html/index.html"
+    content: |
+      <html>
+      <head><title>{{ item.title }}</title></head>
+      <body>
+      <h1>Welcome to {{ item.title }}</h1>
+      <p>This is the {{ item.name }} site, served from {{ ansible_hostname }}</p>
+      </body>
+      </html>
+    mode: '0644'
+  loop:
+    - { name: "www.{{ domain_ex }}", title: "Example48 Lab Site" }
+    - { name: "www.{{ domain_site }}", title: "Site48 Lab Site" }
+    - { name: "secure.{{ domain_ex }}", title: "Secure Example48 Lab Site" }
+    
+  
 - name: Ensure Apache is running
   service:
     name: httpd
@@ -261,7 +369,6 @@ host_key_checking = False
   roles:
     - bind
     - apache
-    - ssl
     - firewall
 
 === ./all-cat.sh ===

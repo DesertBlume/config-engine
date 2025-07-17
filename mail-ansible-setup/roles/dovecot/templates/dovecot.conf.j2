@@ -1,0 +1,8 @@
+# templates/dovecot.conf.j2
+## Dovecot main configuration
+protocols = imap
+listen = *, ::
+# Enable include of conf.d files
+!include conf.d/*.conf
+!include_try local.conf
+

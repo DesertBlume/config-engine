@@ -1,0 +1,58 @@
+ansible_become_password: "cst8246"
+
+
+domain_name: "example48.lab"               # Base domain for the lab (for masquerading, DNS, etc.)  
+mail_hostname: "mail.example48.lab"        # FQDN of the mail server  
+webmail_hostname: "webmail.example48.lab"
+mailserver_ip: "172.16.30.48"              # Mail server IP (for DNS A record)  
+mailclient_ip: "172.16.31.48"              # Mail client IP (if needed)  
+mailhost_ip: "172.16.0.1"                  # Mail Host IP
+# Network definitions for firewall rules
+internal_nets:  
+  - "172.16.30.0/24"  
+  - "172.16.31.0/24"
+  - "172.16.0.0/24"
+blocked_net: "172.16.32.0/24"  
+mail_domain: "{{ domain_name }}"
+
+# group_vars/all.yml
+srv_ip: "172.16.30.48"
+cli_ip: "172.16.31.48"
+alias_ip: "172.16.32.48"
+domain_ex: "example48.lab"
+domain_site: "site48.lab"
+server_network: "172.16.30.0/24"
+alias_network: "172.16.32.0/24"
+client_network: "172.16.31.0/24"
+http_port: "80"
+https_port: "443"
+ns2_ip: "172.16.31.48"
+
+zones:
+  - name: "example48.lab"
+    file: "fwd.example48.lab"
+  - name: "site48.lab"
+    file: "fwd.site48.lab"
+  - name: "16.172.in-addr.arpa"
+    file: "named.16.172"
+
+# Postfix settings  
+postfix_masquerade_domain: "{{ domain_name }}"   # Domain to masquerade as (e.g. example48.lab)  
+postfix_inet_interfaces: "127.0.0.1, {{ mailserver_ip }}"  # Interfaces to bind (loopback and server IP)  
+postfix_mynetworks: "127.0.0.0/8 {{ internal_nets[0] }} {{ internal_nets[1] }} {{ internal_nets[2] }}"  # Trusted networks for relay  
+
+# Dovecot settings  
+dovecot_mail_location: "maildir:~/Maildir"        # Use Maildir in each user's home  
+dovecot_disable_plaintext_auth: "no"             # Allow plaintext auth (within internal network)  
+dovecot_auth_mechanisms: "plain login"           # Auth mechanisms for system users  
+
+# User management  
+mail_users: ["root", "cst8246", "desertblume"]    # System users who will receive mail (Maildir setup)  
+desertblume_password_hash: "<provided-hash>"     # Pre-generated password hash for desertblume user  
+
+# Roundcube settings  
+roundcube_version: "1.5.11"  
+roundcube_archive_url: "https://github.com/roundcube/roundcubemail/releases/download/1.5.11/roundcubemail-{{ roundcube_version }}-complete.tar.gz"  
+roundcube_install_dir: "/var/www/html/roundcube"      # Install location for Roundcube  
+roundcube_web_alias: "/webmail"                  # URL path or alias (if any, e.g., /webmail)  
+

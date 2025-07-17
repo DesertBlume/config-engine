@@ -1,0 +1,10 @@
+<VirtualHost *:80>
+    ServerName {{ webmail_hostname }} 
+    DocumentRoot {{ roundcube_install_dir }}
+    <Directory {{ roundcube_install_dir }}>
+        Options -Indexes +FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
+

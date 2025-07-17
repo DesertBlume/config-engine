@@ -1,0 +1,6 @@
+roundcube = ro*37WH-73hh_10
+
+
+echo "This is a test message" | mail -s "Roundcube Internal Test" cst8246@mail.example48.lab
+
+

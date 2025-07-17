@@ -1,0 +1,44 @@
+- name: Install Podman and dependencies
+  package:
+    name:
+      - podman
+      - python3
+    state: present
+
+- name: Install podman-compose via dnf (EPEL)
+  package:
+    name: podman-compose
+    state: present
+
+- name: Ensure ~/.local/bin is in root's PATH (for manual pip installs if needed)
+  lineinfile:
+    path: /root/.bashrc
+    line: 'export PATH=$PATH:~/.local/bin'
+    insertafter: EOF
+    state: present
+
+- name: Ensure Roundcube Compose directory exists
+  file:
+    path: /opt/roundcube-compose
+    state: directory
+
+- name: Copy podman-compatible docker-compose.yml
+  copy:
+    src: compose-roundcube/docker-compose.yml
+    dest: /opt/roundcube-compose/docker-compose.yml
+    mode: '0644'
+
+- name: Bring up Roundcube container with podman-compose
+  command: podman-compose up -d
+  args:
+    chdir: /opt/roundcube-compose
+
+- name: Show podman-compose version
+  command: podman-compose --version
+  register: podman_compose_version
+  changed_when: false
+
+- name: Display podman-compose version
+  debug:
+    var: podman_compose_version.stdout
+

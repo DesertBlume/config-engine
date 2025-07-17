@@ -1,0 +1,22 @@
+$TTL 86400
+$ORIGIN {{ domain_ex }}.
+
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+        IN NS ns2.{{ domain_ex }}.
+	IN MX 10 {{ mail_hostname }}.
+
+
+ns1     IN A {{ srv_ip }}
+ns2     IN A {{ cli_ip }}
+ftp     IN A {{ alias_ip }}
+secure  IN A {{ alias_ip }}
+www     IN A {{ srv_ip }}
+mail	IN A {{ mailserver_ip }}
+webmail IN A {{ mailserver_ip }}

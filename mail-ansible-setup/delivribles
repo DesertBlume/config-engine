@@ -1,0 +1,22 @@
+
+    [1] Mail server setup in DNS (MX record) + resolver setup
+
+➜ Ensure proper MX record configuration and DNS resolution for mail delivery.
+
+    [1] Send mail to geeks@[172.16.30.MN] and cst8246@mail.exampleMN.lab
+
+➜ Verify that emails are correctly routed using both IP-based and hostname-based addressing.
+
+    [1] Masquerade the domain. Send mail to geeks@exampleMN.lab.
+
+➜ Configure Postfix to use the domain name instead of the full hostname in outgoing emails.
+
+    [2] Automation of Mail Server Configuration
+
+➜ Use scripts to automate DNS setup, mail server configuration, aliasing, and firewall rules.
+
+Firewall rules:
+
+➜ Allow client and server networks access to the SMTP port.
+
+➜ Reject alias network access to SMTP.
