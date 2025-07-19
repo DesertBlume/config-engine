@@ -1,0 +1,14 @@
+dn: cn=happy.{{ ldap_domain }},ou=hosts,{{ ldap_suffix }}
+objectClass: device
+objectClass: ipHost
+cn: happy.{{ ldap_domain }}
+ipHostNumber: 172.16.32.48
+description: Happy server
+
+dn: cn=peachy.{{ ldap_domain }},ou=hosts,{{ ldap_suffix }}
+objectClass: device
+objectClass: ipHost
+cn: peachy.{{ ldap_domain }}
+ipHostNumber: 172.16.33.48
+description: Peachy server
+

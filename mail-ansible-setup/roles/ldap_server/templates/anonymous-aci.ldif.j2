@@ -1,0 +1,8 @@
+dn: {{ ldap_suffix }}
+changetype: modify
+add: aci
+aci: (targetattr = "*")
+     (version 3.0; acl "Allow anonymous read of DIT";
+     allow (read, search, compare)
+     userdn = "ldap:///anyone";)
+

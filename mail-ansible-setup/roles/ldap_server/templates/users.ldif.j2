@@ -1,0 +1,37 @@
+dn: uid=linuser1,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: linuser1
+sn: User
+uid: linuser1
+uidNumber: 1001
+gidNumber: 1000
+homeDirectory: /home/linuser1
+loginShell: /bin/bash
+mail: linuser1@{{ ldap_domain }}
+mail: linux.user1@{{ ldap_domain }}
+
+dn: uid=linuser2,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: linuser2
+sn: User
+uid: linuser2
+uidNumber: 1002
+gidNumber: 1000
+homeDirectory: /home/linuser2
+loginShell: /bin/bash
+mail: linuser2@{{ ldap_domain }}
+
+dn: uid=haja0013,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: haja0013
+sn: User
+uid: haja0013
+uidNumber: 1003
+gidNumber: 1000
+homeDirectory: /home/haja0013
+loginShell: /bin/bash
+mail: haja0013@{{ ldap_domain }}
+
