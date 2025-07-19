@@ -12,22 +12,13 @@
     mode: '0644'
   notify: Restart Postfix
 
-- name: Deploy virtual alias file
-  copy:
-    src: "virtual"
-    dest: "/etc/postfix/virtual"
-    owner: root
-    group: root
-    mode: "0644"
-  notify: Postmap virtual
-
 - name: Set up mail alias for 'geeks'
   lineinfile:
     path: "/etc/aliases"
     create: yes
     regexp: "^geeks:"
     line: "geeks: cst8246"
-  notify: Rebuild aliases
+  notify: Rebuild aliases  # will trigger newaliases
 
 - name: Ensure Postfix is running and enabled
   service:

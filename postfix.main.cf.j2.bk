@@ -1,0 +1,35 @@
+# templates/postfix-main.cf.j2
+# Basic Postfix configuration
+compatibility_level = 2
+
+# Hostname and domain settings
+myhostname = {{ mail_hostname }}
+mydomain = {{ mail_domain }}
+myorigin = $mydomain
+
+# Networking
+inet_interfaces = all
+inet_protocols = all
+mydestination = {{ mail_hostname }}, localhost.{{ mail_domain }}, localhost, {{ mail_domain }}{% if extra_hostnames is defined %}, {{ extra_hostnames|join(', ') }}{% endif %}
+mynetworks = 127.0.0.0/8, 172.16.0.0/16
+
+# Mail delivery
+home_mailbox = Maildir/
+virtual_alias_maps = hash:/etc/postfix/virtual
+
+# Security and authentication
+smtpd_banner = $myhostname ESMTP $mail_name
+# (Other smtpd restrictions, smtpd_recipient_restrictions, etc. can be added here if needed)
+
+# TLS configuration
+smtpd_tls_cert_file = /etc/pki/tls/certs/postfix.pem
+smtpd_tls_key_file = /etc/pki/tls/private/postfix.key
+smtpd_tls_security_level = may
+smtp_tls_security_level = may
+smtp_tls_CAfile = /etc/pki/tls/certs/ca-bundle.crt
+
+# Additional defaults (paths, aliases, etc.)
+sendmail_path = /usr/sbin/sendmail.postfix
+alias_maps = hash:/etc/aliases
+alias_database = hash:/etc/aliases
+

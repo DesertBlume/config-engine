@@ -47,7 +47,7 @@ dovecot_disable_plaintext_auth: "no"             # Allow plaintext auth (within 
 dovecot_auth_mechanisms: "plain login"           # Auth mechanisms for system users  
 
 # User management  
-mail_users: ["root", "cst8246", "desertblume"]    # System users who will receive mail (Maildir setup)  
+mail_users: ["root", "cst8246", "desertblume", "abc"]    # System users who will receive mail (Maildir setup)  
 desertblume_password_hash: "<provided-hash>"     # Pre-generated password hash for desertblume user  
 
 # Roundcube settings  

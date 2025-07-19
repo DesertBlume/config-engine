@@ -1,3 +1,4 @@
+=== roles/postfix/templates/main.cf.j2 ===
 # templates/postfix-main.cf.j2
 
 compatibility_level = 2
@@ -52,4 +53,49 @@ smtp_tls_CAfile = /etc/pki/tls/certs/ca-bundle.crt
 
 meta_directory = /etc/postfix
 shlib_directory = /usr/lib64/postfix
+
+=== roles/postfix/tasks/main.yml ===
+- name: Install Postfix
+  package:
+    name: postfix
+    state: present
+
+- name: Configure Postfix main.cf
+  template:
+    src: "main.cf.j2"
+    dest: "/etc/postfix/main.cf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Postfix
+
+- name: Set up mail alias for 'geeks'
+  lineinfile:
+    path: "/etc/aliases"
+    create: yes
+    regexp: "^geeks:"
+    line: "geeks: cst8246"
+  notify: Rebuild aliases  # will trigger newaliases
+
+- name: Compile Postfix virtual alias map
+  command: postmap /etc/postfix/virtual
+  args:
+    creates: /etc/postfix/virtual.db
+
+- name: Ensure Postfix is running and enabled
+  service:
+    name: postfix
+    state: started
+    enabled: yes
+
+=== roles/postfix/handlers/main.yml ===
+# roles/postfix/handlers/main.yml
+- name: Restart Postfix
+  service:
+    name: postfix
+    state: restarted
+
+- name: Rebuild aliases
+  command: "newaliases"
+  when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
 

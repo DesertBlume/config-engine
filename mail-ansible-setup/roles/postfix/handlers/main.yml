@@ -1,10 +1,11 @@
-# roles/postfix/handlers/main.yml
 - name: Restart Postfix
   service:
     name: postfix
     state: restarted
 
 - name: Rebuild aliases
-  command: "newaliases"
-  when: ansible_os_family == "RedHat" or ansible_os_family == "Debian"
+  command: newaliases
+
+- name: Postmap virtual
+  command: postmap /etc/postfix/virtual
 

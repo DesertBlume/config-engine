@@ -1,5 +1,3 @@
-# templates/postfix-main.cf.j2
-
 compatibility_level = 2
 
 queue_directory = /var/spool/postfix
@@ -9,29 +7,16 @@ data_directory = /var/lib/postfix
 
 mail_owner = postfix
 
-myhostname = {{ mail_hostname }}
-mydomain = {{ mail_domain }}
-myorigin = {{ postfix_masquerade_domain }}
-
-inet_interfaces = {{ postfix_inet_interfaces }}
+inet_interfaces = localhost
 inet_protocols = all
 
-mydestination = {{ mail_hostname }}, localhost.{{ mail_domain }}, localhost, {{ mail_domain }}, mail.{{ mail_domain }}, {{ mailserver_ip }}
-
+mydestination = $myhostname, localhost.$mydomain, localhost
 unknown_local_recipient_reject_code = 550
 
-mynetworks = {{ postfix_mynetworks }}
-
-virtual_alias_maps = hash:/etc/postfix/virtual
+relayhost = [{{ mailserver_ip }}]
 
 alias_maps = hash:/etc/aliases
 alias_database = hash:/etc/aliases
-
-home_mailbox = Maildir/
-
-smtpd_banner = $myhostname ESMTP $mail_name
-
-debug_peer_level = 2
 
 sendmail_path = /usr/sbin/sendmail.postfix
 newaliases_path = /usr/bin/newaliases.postfix
@@ -52,4 +37,9 @@ smtp_tls_CAfile = /etc/pki/tls/certs/ca-bundle.crt
 
 meta_directory = /etc/postfix
 shlib_directory = /usr/lib64/postfix
+
+debug_peer_level = 2
+debugger_command =
+	 PATH=/bin:/usr/bin:/usr/local/bin:/usr/X11R6/bin
+	 ddd $daemon_directory/$process_name $process_id & sleep 5
 
