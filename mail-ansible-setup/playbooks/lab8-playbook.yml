@@ -1,11 +1,13 @@
-- name: Setup LDAP Server and NSS Client
-  hosts: all
+- name: Configure LDAP servers
+  hosts: ldap_servers
   become: true
-  
   roles:
-    - role: ldap_server
-      when: inventory_hostname in groups['ldap_servers']
+    - ldap_server
+    - firewall
 
-    - role: ldap_client
-      when: inventory_hostname in groups['ldap_clients']
+- name: Configure LDAP clients
+  hosts: ldap_clients
+  become: true
+  roles:
+    - ldap_client
 
