@@ -1,6 +1,3 @@
-- name: Flush all iptables rules before applying new ones
-  command: iptables -F
-
 - name: Check if 389-ds-base is already installed
   shell: rpm -q 389-ds-base
   register: ds_installed
@@ -36,20 +33,48 @@
     state: present
   when: ds_installed.rc != 0
 
-- name: Template LDIF files
+- name: Template base.ldif
   template:
-    src: "{{ item.name }}.ldif.j2"
-    dest: "{{ item.ldif }}"
+    src: base.ldif.j2
+    dest: /root/base.ldif
     mode: '0644'
-  loop: "{{ ldap_entries }}"
-  loop_control:
-    label: "{{ item.name }}"
+
+- name: Template ou.ldif
+  template:
+    src: ou.ldif.j2
+    dest: /root/ou.ldif
+    mode: '0644'
+
+- name: Template users.ldif
+  template:
+    src: users.ldif.j2
+    dest: /root/users.ldif
+    mode: '0644'
+
+- name: Template group.ldif
+  template:
+    src: group.ldif.j2
+    dest: /root/group.ldif
+    mode: '0644'
+
+- name: Template hosts.ldif
+  template:
+    src: hosts.ldif.j2
+    dest: /root/hosts.ldif
+    mode: '0644'
+
+- name: Template anonymous-aci.ldif
+  template:
+    src: anonymous-aci.ldif.j2
+    dest: /root/anonymous-aci.ldif
+    mode: '0644'
 
 - name: Template 389 Directory Server instance configuration
   template:
     src: instance.inf.j2
     dest: /root/instance.inf
     mode: '0600'
+
 
 - name: Run interactive setup (idempotent method)
   command: dscreate from-file /root/instance.inf
@@ -62,32 +87,33 @@
     enabled: true
     state: started
 
-- name: Wait for LDAP server to become available
-  wait_for:
-    host: "{{ ldap_uri | regex_replace('^ldap://', '') | regex_replace('/$', '') }}"
-    port: 389
-    delay: 2
-    timeout: 30
-
-- name: Check if LDAP entries exist
-  shell: >
-    ldapsearch -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
-    -H "{{ ldap_uri }}" -b "{{ item.dn }}" -s base dn
-  register: ldap_entry_check
+- name: Check if base DN exists
+  shell: |
+    ldapsearch -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -b "dc=example48,dc=lab" -s base dn
+  register: base_dn_check
   failed_when: false
   changed_when: false
-  loop: "{{ ldap_entries }}"
-  loop_control:
-    label: "{{ item.name }}"
 
-- name: Add LDAP entries if missing
+- name: Load base DIT if it doesn't exist
   command: >
-    ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
-    -H "{{ ldap_uri }}" -f {{ item.item.ldif }}
-  when: "'dn: ' ~ item.item.dn not in item.stdout"
-  loop: "{{ ldap_entry_check.results }}"
-  loop_control:
-    label: "{{ item.item.name }}"
+    ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/base.ldif
+  when: '"dn: dc=example48,dc=lab" not in base_dn_check.stdout'
+    
+    
+- name: Add organizational units
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/ou.ldif
+
+- name: Add user accounts
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/users.ldif
+
+- name: Add group
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/group.ldif
+
+- name: Add host entries
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/hosts.ldif
+
+- name: Enable anonymous read access to DIT
+  command: ldapmodify -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/anonymous-aci.ldif
 
 - name: Install nslcd and nss-pam-ldapd for LDAP name resolution
   dnf:

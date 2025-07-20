@@ -6,30 +6,30 @@
       - nss-pam-ldapd
     state: present
 
-- name: Configure /etc/openldap/ldap.conf
-  copy:
+- name: Template /etc/openldap/ldap.conf
+  template:
+    src: ldap.conf.j2
     dest: /etc/openldap/ldap.conf
-    content: |
-      BASE {{ ldap_suffix }}
-      URI {{ ldap_uri }}
+    mode: '0644'
 
-- name: Configure /etc/nslcd.conf
-  copy:
+- name: Template /etc/nslcd.conf
+  template:
+    src: nslcd.conf.j2
     dest: /etc/nslcd.conf
-    content: |
-      uri {{ ldap_uri }}
-      base {{ ldap_suffix }}
-      base hosts ou=hosts,{{ ldap_suffix }}
+    mode: '0600'
 
-- name: Start and enable nslcd
+- name: Template /etc/authselect/user-nsswitch.conf
+  template:
+    src: user-nsswitch.conf.j2
+    dest: /etc/authselect/user-nsswitch.conf
+    mode: '0644'
+
+- name: Apply NSS configuration via authselect
+  command: authselect apply-changes
+
+- name: Enable and start nslcd
   systemd:
     name: nslcd
     enabled: true
     state: started
-
-- name: Update /etc/nsswitch.conf
-  lineinfile:
-    path: /etc/nsswitch.conf
-    regexp: '^hosts:'
-    line: 'hosts: files dns ldap'
 

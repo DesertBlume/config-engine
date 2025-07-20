@@ -1,10 +1,11 @@
 - name: Setup LDAP Server and NSS Client
   hosts: all
   become: true
-  vars_files:
-    - group_vars/all.yml
-
+  
   roles:
-    - { role: ldap_server, when: inventory_hostname in groups['ldap_servers'] }
-    - { role: ldap_client, when: inventory_hostname in groups['ldap_clients'] }
+    - role: ldap_server
+      when: inventory_hostname in groups['ldap_servers']
+
+    - role: ldap_client
+      when: inventory_hostname in groups['ldap_clients']
 

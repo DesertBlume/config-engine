@@ -1,0 +1,262 @@
+[root@haja0013-CLT ~]# cat /etc/openldap/ldap.conf 
+#
+# LDAP Defaults
+#
+
+# See ldap.conf(5) for details
+# This file should be world readable but not world writable.
+
+BASE	dc=example48,dc=lab
+URI	ldap://172.16.30.48
+
+#SIZELIMIT	12
+#TIMELIMIT	15
+#DEREF		never
+
+# When no CA certificates are specified the Shared System Certificates
+# are in use. In order to have these available along with the ones specified
+# by TLS_CACERTDIR one has to include them explicitly:
+#TLS_CACERT	/etc/pki/tls/cert.pem
+
+# System-wide Crypto Policies provide up to date cipher suite which should
+# be used unless one needs a finer grinded selection of ciphers. Hence, the
+# PROFILE=SYSTEM value represents the default behavior which is in place
+# when no explicit setting is used. (see openssl-ciphers(1) for more info)
+#TLS_CIPHER_SUITE PROFILE=SYSTEM
+
+# Turning this off breaks GSSAPI used with krb5 when rdns = false
+SASL_NOCANON	on
+
+[root@haja0013-CLT ~]# 
+
+[root@haja0013-CLT ~]# cat /etc/nslcd.conf 
+# This is the configuration file for the LDAP nameservice
+# switch library's nslcd daemon. It configures the mapping
+# between NSS names (see /etc/nsswitch.conf) and LDAP
+# information in the directory.
+# See the manual page nslcd.conf(5) for more information.
+
+# The user and group nslcd should run as.
+uid nslcd
+gid ldap
+
+# The uri pointing to the LDAP server to use for name lookups.
+# Multiple entries may be specified. The address that is used
+# here should be resolvable without using LDAP (obviously).
+#uri ldap://127.0.0.1/
+#uri ldaps://127.0.0.1/
+#uri ldapi://%2fvar%2frun%2fldapi_sock/
+# Note: %2f encodes the '/' used as directory separator
+uri ldap://172.16.30.48
+
+# The LDAP version to use (defaults to 3
+# if supported by client library)
+#ldap_version 3
+
+# The distinguished name of the search base.
+base dc=example48,dc=lab
+
+# The distinguished name to bind to the server with.
+# Optional: default is to bind anonymously.
+#binddn cn=proxyuser,dc=example,dc=com
+
+# The credentials to bind with.
+# Optional: default is no credentials.
+# Note that if you set a bindpw you should check the permissions of this file.
+#bindpw secret
+
+# The distinguished name to perform password modifications by root by.
+#rootpwmoddn cn=admin,dc=example,dc=com
+
+# The default search scope.
+#scope sub
+#scope one
+#scope base
+
+# Customize certain database lookups.
+#base   group  ou=Groups,dc=example,dc=com
+#base   passwd ou=People,dc=example,dc=com
+#base   shadow ou=People,dc=example,dc=com
+#scope  group  onelevel
+#scope  hosts  sub
+
+# Bind/connect timelimit.
+#bind_timelimit 30
+
+# Search timelimit.
+#timelimit 30
+
+# Idle timelimit. nslcd will close connections if the
+# server has not been contacted for the number of seconds.
+#idle_timelimit 3600
+
+# Use StartTLS without verifying the server certificate.
+#ssl start_tls
+#tls_reqcert never
+
+# CA certificates for server certificate verification
+#tls_cacertdir /etc/ssl/certs
+#tls_cacertfile /etc/ssl/ca.cert
+
+# Seed the PRNG if /dev/urandom is not provided
+#tls_randfile /var/run/egd-pool
+
+# SSL cipher suite
+# See man ciphers for syntax
+#tls_ciphers TLSv1
+
+# Client certificate and key
+# Use these, if your server requires client authentication.
+#tls_cert
+#tls_key
+
+# Mappings for Services for UNIX 3.5
+#filter passwd (objectClass=User)
+#map    passwd uid              msSFU30Name
+#map    passwd userPassword     msSFU30Password
+#map    passwd homeDirectory    msSFU30HomeDirectory
+#map    passwd homeDirectory    msSFUHomeDirectory
+#filter shadow (objectClass=User)
+#map    shadow uid              msSFU30Name
+#map    shadow userPassword     msSFU30Password
+#filter group  (objectClass=Group)
+#map    group  member           msSFU30PosixMember
+
+# Mappings for Services for UNIX 2.0
+#filter passwd (objectClass=User)
+#map    passwd uid              msSFUName
+#map    passwd userPassword     msSFUPassword
+#map    passwd homeDirectory    msSFUHomeDirectory
+#map    passwd gecos            msSFUName
+#filter shadow (objectClass=User)
+#map    shadow uid              msSFUName
+#map    shadow userPassword     msSFUPassword
+#map    shadow shadowLastChange pwdLastSet
+#filter group  (objectClass=Group)
+#map    group  member           posixMember
+
+# Mappings for Active Directory
+#pagesize 1000
+#referrals off
+#idle_timelimit 800
+#filter passwd (&(objectClass=user)(!(objectClass=computer))(uidNumber=*)(unixHomeDirectory=*))
+#map    passwd uid              sAMAccountName
+#map    passwd homeDirectory    unixHomeDirectory
+#map    passwd gecos            displayName
+#filter shadow (&(objectClass=user)(!(objectClass=computer))(uidNumber=*)(unixHomeDirectory=*))
+#map    shadow uid              sAMAccountName
+#map    shadow shadowLastChange pwdLastSet
+#filter group  (objectClass=group)
+
+# Alternative mappings for Active Directory
+# (replace the SIDs in the objectSid mappings with the value for your domain)
+#pagesize 1000
+#referrals off
+#idle_timelimit 800
+#filter passwd (&(objectClass=user)(objectClass=person)(!(objectClass=computer)))
+#map    passwd uid           cn
+#map    passwd uidNumber     objectSid:S-1-5-21-3623811015-3361044348-30300820
+#map    passwd gidNumber     objectSid:S-1-5-21-3623811015-3361044348-30300820
+#map    passwd homeDirectory "/home/$cn"
+#map    passwd gecos         displayName
+#map    passwd loginShell    "/bin/bash"
+#filter group (|(objectClass=group)(objectClass=person))
+#map    group gidNumber      objectSid:S-1-5-21-3623811015-3361044348-30300820
+
+# Mappings for AIX SecureWay
+#filter passwd (objectClass=aixAccount)
+#map    passwd uid              userName
+#map    passwd userPassword     passwordChar
+#map    passwd uidNumber        uid
+#map    passwd gidNumber        gid
+#filter group  (objectClass=aixAccessGroup)
+#map    group  cn               groupName
+#map    group  gidNumber        gid
+#
+#binddn uid=ldapbind,ou=accounts,dc=example48,dc=lab
+#bindpw cst8246cst8246
+
+[root@haja0013-CLT ~]# 
+[root@haja0013-CLT ~]# cat /etc/nsswitch.conf
+# Generated by authselect on Sat Jul 19 11:11:22 2025
+# Do not modify this file manually.
+
+# If you want to make changes to nsswitch.conf please modify
+# /etc/authselect/user-nsswitch.conf and run 'authselect apply-changes'.
+#
+# Note that your changes may not be applied as they may be
+# overwritten by selected profile. Maps set in the authselect
+# profile takes always precedence and overwrites the same maps
+# set in the user file. Only maps that are not set by the profile
+# are applied from the user file.
+#
+# For example, if the profile sets:
+#     passwd: sss files
+# and /etc/authselect/user-nsswitch.conf contains:
+#     passwd: files
+#     hosts: files dns ldap
+# the resulting generated nsswitch.conf will be:
+#     passwd: sss files # from profile
+#     hosts: files dns  # from user file
+
+aliases:    files
+automount:  files
+ethers:     files
+group:      files systemd
+hosts:      files dns ldap
+initgroups: files
+netgroup:   files
+networks:   files
+passwd:     files systemd
+protocols:  files
+publickey:  files
+rpc:        files
+services:   files
+shadow:     files
+# Included from /etc/authselect/user-nsswitch.conf
+
+#
+# /etc/nsswitch.conf
+#
+# An example Name Service Switch config file. This file should be
+# sorted with the most-used services at the beginning.
+#
+# The entry '[NOTFOUND=return]' means that the search for an
+# entry should stop if the search in the previous entry turned
+# up nothing. Note that if the search failed due to some other reason
+# (like no NIS server responding) then the search continues with the
+# next entry.
+#
+# Valid entries include:
+#
+#	nisplus			Use NIS+ (NIS version 3)
+#	nis			Use NIS (NIS version 2), also called YP
+#	dns			Use DNS (Domain Name Service)
+#	files			Use the local files in /etc
+#	db			Use the pre-processed /var/db files
+#	compat			Use /etc files plus *_compat pseudo-databases
+#	hesiod			Use Hesiod (DNS) for user lookups
+#	sss			Use sssd (System Security Services Daemon)
+#	[NOTFOUND=return]	Stop searching if not found so far
+#
+# 'sssd' performs its own 'files'-based caching, so it should
+# generally come before 'files'.
+
+# To use 'db', install the nss_db package, and put the 'db' in front
+# of 'files' for entries you want to be looked up first in the
+# databases, like this:
+#
+# passwd:    db files
+# shadow:    db files
+# group:     db files
+
+
+
+bootparams: files
+
+netmasks:   files
+
+
+
+[root@haja0013-CLT ~]# 
+

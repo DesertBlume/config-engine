@@ -1,0 +1,113 @@
+# LDAP CLI Crash Course
+
+## 1. ldapsearch — Search the directory
+
+```bash
+ldapsearch -x -H ldap://localhost -b "dc=example,dc=com" '(objectClass=*)'
+```
+
+**Options:**
+- `-x`: Simple auth (not SASL)
+- `-H`: LDAP URI
+- `-D`: Bind DN (e.g., `cn=Directory Manager,...`)
+- `-w`: Password
+- `-b`: Base DN to start search
+- Filter in `'()'`: Search criteria
+
+**Examples:**
+```bash
+ldapsearch -x -b "dc=example,dc=com" "(uid=linuser1)"
+ldapsearch -x -b "dc=example,dc=com" "(mail=*)" mail
+```
+
+---
+
+## 2. ldapadd — Add entries to LDAP
+
+```bash
+ldapadd -x -D "cn=Directory Manager,dc=example,dc=com" -w secret -f file.ldif
+```
+
+**Example `file.ldif`:**
+```ldif
+dn: uid=linuser1,ou=accounts,dc=example,dc=com
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: linuser1
+sn: User
+uid: linuser1
+uidNumber: 1001
+gidNumber: 1000
+homeDirectory: /home/linuser1
+loginShell: /bin/bash
+mail: linuser1@example.com
+```
+
+---
+
+## 3. ldapmodify — Modify existing entries
+
+```bash
+ldapmodify -x -D "cn=Directory Manager,dc=example,dc=com" -w secret -f changes.ldif
+```
+
+**Add attribute example:**
+```ldif
+dn: uid=linuser1,ou=accounts,dc=example,dc=com
+changetype: modify
+add: mail
+mail: altmail@example.com
+```
+
+**Replace attribute example:**
+```ldif
+dn: uid=linuser1,ou=accounts,dc=example,dc=com
+changetype: modify
+replace: loginShell
+loginShell: /bin/zsh
+```
+
+**Delete attribute example:**
+```ldif
+dn: uid=linuser1,ou=accounts,dc=example,dc=com
+changetype: modify
+delete: mail
+```
+
+---
+
+## 4. ldapdelete — Delete LDAP entries
+
+**Delete a single entry:**
+```bash
+ldapdelete -x -D "cn=Directory Manager,dc=example,dc=com" -w secret \
+  "uid=linuser1,ou=accounts,dc=example,dc=com"
+```
+
+**Delete an entire subtree recursively:**
+```bash
+ldapdelete -x -r -D "cn=Directory Manager,dc=example,dc=com" -w secret \
+  "ou=accounts,dc=example,dc=com"
+```
+
+---
+
+## 5. ldappasswd — Change a user's LDAP password
+
+```bash
+ldappasswd -x -D "cn=Directory Manager,dc=example,dc=com" -w secret \
+  -s NewPass123 "uid=linuser1,ou=accounts,dc=example,dc=com"
+```
+
+You can also prompt for password with `-a` and `-s`.
+
+---
+
+## Quick anonymous test
+
+```bash
+ldapsearch -x -H ldap://localhost -b "dc=example,dc=com"
+```
+
+Ensure anonymous bind is allowed by ACL if using this method.
+

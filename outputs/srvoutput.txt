@@ -1,0 +1,216 @@
+=== roles/ldap_server/templates/group.ldif.j2 ===
+dn: cn=users,ou=groups,{{ ldap_suffix }}
+objectClass: posixGroup
+cn: users
+gidNumber: 1000
+memberUid: linuser1
+memberUid: linuser2
+memberUid: haja0013
+
+=== roles/ldap_server/templates/users.ldif.j2 ===
+dn: uid=linuser1,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: linuser1
+sn: User
+uid: linuser1
+uidNumber: 1001
+gidNumber: 1000
+homeDirectory: /home/linuser1
+loginShell: /bin/bash
+mail: linuser1@{{ ldap_domain }}
+mail: linux.user1@{{ ldap_domain }}
+
+dn: uid=linuser2,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: linuser2
+sn: User
+uid: linuser2
+uidNumber: 1002
+gidNumber: 1000
+homeDirectory: /home/linuser2
+loginShell: /bin/bash
+mail: linuser2@{{ ldap_domain }}
+
+dn: uid=haja0013,ou=accounts,{{ ldap_suffix }}
+objectClass: inetOrgPerson
+objectClass: posixAccount
+cn: haja0013
+sn: User
+uid: haja0013
+uidNumber: 1003
+gidNumber: 1000
+homeDirectory: /home/haja0013
+loginShell: /bin/bash
+mail: haja0013@{{ ldap_domain }}
+
+=== roles/ldap_server/templates/anonymous-aci.ldif.j2 ===
+dn: {{ ldap_suffix }}
+changetype: modify
+add: aci
+aci: (targetattr = "*")
+     (version 3.0; acl "Allow anonymous read of DIT";
+     allow (read, search, compare)
+     userdn = "ldap:///anyone";)
+
+=== roles/ldap_server/templates/instance.inf.j2 ===
+[general]
+config_version = 2
+
+[slapd]
+instance_name = ldap
+root_password = {{ ldap_bind_pw }}
+self_sign_cert = false
+port = 389
+start = True
+# Using system hostname; no need to specify if you want to keep default
+
+[backend-userroot]
+suffix = {{ ldap_suffix }}
+create_suffix_entry = false
+sample_entries = no
+
+=== roles/ldap_server/templates/hosts.ldif.j2 ===
+dn: cn=happy.{{ ldap_domain }},ou=hosts,{{ ldap_suffix }}
+objectClass: device
+objectClass: ipHost
+cn: happy.{{ ldap_domain }}
+ipHostNumber: 172.16.32.48
+description: Happy server
+
+dn: cn=peachy.{{ ldap_domain }},ou=hosts,{{ ldap_suffix }}
+objectClass: device
+objectClass: ipHost
+cn: peachy.{{ ldap_domain }}
+ipHostNumber: 172.16.33.48
+description: Peachy server
+
+=== roles/ldap_server/templates/ou.ldif.j2 ===
+dn: ou=accounts,{{ ldap_suffix }}
+objectClass: top
+objectClass: organizationalUnit
+ou: accounts
+
+dn: ou=groups,{{ ldap_suffix }}
+objectClass: top
+objectClass: organizationalUnit
+ou: groups
+
+dn: ou=hosts,{{ ldap_suffix }}
+objectClass: top
+objectClass: organizationalUnit
+ou: hosts
+
+=== roles/ldap_server/templates/base.ldif.j2 ===
+dn: {{ ldap_suffix }}
+objectClass: top
+objectClass: domain
+dc: {{ ldap_domain.split('.')[0] }}
+
+=== roles/ldap_server/tasks/main.yml ===
+- name: Enable required AppStream repo (if needed)
+  command: >
+    subscription-manager repos --enable=rhel-8-for-x86_64-appstream-rpms
+  register: enable_repo
+  failed_when: false
+  changed_when: "'is already enabled' not in enable_repo.stdout"
+
+- name: Reset existing 389-ds module streams
+  command: dnf module reset 389-ds -y
+
+- name: Enable 389-ds module stream
+  command: dnf module enable 389-ds -y
+
+- name: Clean DNF cache
+  command: dnf clean all
+
+- name: Rebuild DNF cache
+  command: dnf makecache
+
+- name: Install 389 Directory Server
+  dnf:
+    name: 389-ds-base
+    state: present
+
+
+- name: Install 389-ds-base
+  dnf:
+    name: 389-ds-base
+    state: present
+
+- name: Template base.ldif
+  template:
+    src: base.ldif.j2
+    dest: /root/base.ldif
+    mode: '0644'
+
+- name: Template ou.ldif
+  template:
+    src: ou.ldif.j2
+    dest: /root/ou.ldif
+    mode: '0644'
+
+- name: Template users.ldif
+  template:
+    src: users.ldif.j2
+    dest: /root/users.ldif
+    mode: '0644'
+
+- name: Template group.ldif
+  template:
+    src: group.ldif.j2
+    dest: /root/group.ldif
+    mode: '0644'
+
+- name: Template hosts.ldif
+  template:
+    src: hosts.ldif.j2
+    dest: /root/hosts.ldif
+    mode: '0644'
+
+- name: Template anonymous-aci.ldif
+  template:
+    src: anonymous-aci.ldif.j2
+    dest: /root/anonymous-aci.ldif
+    mode: '0644'
+
+- name: Template 389 Directory Server instance configuration
+  template:
+    src: instance.inf.j2
+    dest: /root/instance.inf
+    mode: '0600'
+
+
+- name: Run interactive setup (idempotent method)
+  command: dscreate from-file /root/instance.inf
+  args:
+    creates: /etc/dirsrv/slapd-ldap
+
+- name: Start and enable 389 Directory Server
+  systemd:
+    name: dirsrv@ldap
+    enabled: true
+    state: started
+
+- name: Load base DIT
+  command: >
+    ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/base.ldif
+  args:
+    creates: /var/lib/dirsrv/slapd-ldap/DB_CONFIG
+
+- name: Add organizational units
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/ou.ldif
+
+- name: Add user accounts
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/users.ldif
+
+- name: Add group
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/group.ldif
+
+- name: Add host entries
+  command: ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/hosts.ldif
+
+- name: Enable anonymous read access to DIT
+  command: ldapmodify -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" -H "{{ ldap_uri }}" -f /root/anonymous-aci.ldif
+

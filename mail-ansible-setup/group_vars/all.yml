@@ -1,47 +1,52 @@
+ansible_user: cst8246
+ansible_become: true
 ansible_become_password: "cst8246"
 
 # ────────────────
 # 🌐 Domain & Network Settings
 # ────────────────
-domain_name: "example48.lab"                # Primary domain used throughout the lab
-domain_ex: "example48.lab"                  # Duplicate of domain_name (can be removed or aliased)
-domain_site: "site48.lab"                   # Secondary domain used in DNS zones
+domain_name: "example48.lab"                # Primary domain
+domain_ex: "example48.lab"                  # Used by other roles (intentional duplicate)
+domain_site: "site48.lab"                   # Secondary domain for DNS
 
-srv_ip: "172.16.30.48"                      # Server IP (alias for mailserver_ip)
+srv_ip: "172.16.30.48"                      # Server IP
+mailserver_ip: "{{ srv_ip }}"               # Alias for mail roles
+
 cli_ip: "172.16.31.48"                      # Client IP
-alias_ip: "172.16.32.48"                    # Alias IP (for hostname entry)
-ns2_ip: "172.16.31.48"                      # Same as cli_ip (can reuse variable)
+mailclient_ip: "{{ cli_ip }}"               # Alias for mail roles
+
+alias_ip: "172.16.32.48"                    # LDAP host entry
+ns2_ip: "172.16.31.48"                      # Used in DNS (same as cli_ip)
 
 server_network: "172.16.30.0/24"
 client_network: "172.16.31.0/24"
 alias_network: "172.16.32.0/24"
 
 internal_nets:
-  - "{{ server_network }}"
-  - "{{ client_network }}"
+  - "172.16.30.0/24"
+  - "172.16.31.0/24"
   - "172.16.0.0/24"
+  - "172.16.32.0/24"
 
 blocked_net: "172.16.32.0/24"
 
 # ────────────────
 # 🔐 LDAP Settings
 # ────────────────
-ldap_domain: "{{ domain_name }}"
-ldap_suffix: "dc={{ domain_name.split('.')[0] }},dc={{ domain_name.split('.')[1] }}"
-ldap_uri: "ldap://{{ srv_ip }}"
+ldap_domain: "example48.lab"
+ldap_suffix: "dc=example48,dc=lab"
+ldap_uri: "ldap://172.16.30.48"
 ldap_bind_dn: "cn=Directory Manager"
-ldap_bind_pw: "cst8246cst8246"
+ldap_bind_pw: "cst8246cst8246"  # Replace this with a secure password in production
+postfix_mynetworks: "{{ '127.0.0.0/8 ' + internal_nets | join(' ') }}"
 
 # ────────────────
 # 📧 Mail Server (Postfix & Dovecot)
 # ────────────────
-mailserver_ip: "{{ srv_ip }}"
-mailclient_ip: "{{ cli_ip }}"
-mailhost_ip: "172.16.0.1"
+mailhost_ip: "172.16.0.1"  # Internal router or gateway
 
 postfix_masquerade_domain: "{{ domain_name }}"
 postfix_inet_interfaces: "127.0.0.1, {{ mailserver_ip }}"
-postfix_mynetworks: "127.0.0.0/8 {{ internal_nets | join(' ') }}"
 
 dovecot_mail_location: "maildir:~/Maildir"
 dovecot_disable_plaintext_auth: "no"
@@ -82,4 +87,26 @@ zones:
 # ────────────────
 http_port: "80"
 https_port: "443"
+
+
+ldap_entries:
+  - name: base
+    dn: "dc=example48,dc=lab"
+    ldif: "/root/base.ldif"
+
+  - name: ou
+    dn: "ou=accounts,dc=example48,dc=lab"
+    ldif: "/root/ou.ldif"
+
+  - name: users
+    dn: "uid=linuser1,ou=accounts,dc=example48,dc=lab"
+    ldif: "/root/users.ldif"
+
+  - name: group
+    dn: "cn=users,ou=groups,dc=example48,dc=lab"
+    ldif: "/root/group.ldif"
+
+  - name: hosts
+    dn: "cn=happy.example48.lab,ou=hosts,dc=example48,dc=lab"
+    ldif: "/root/hosts.ldif"
 

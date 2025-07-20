@@ -1,0 +1,20 @@
+# This file will be copied to /etc/authselect/user-nsswitch.conf
+# and applied via `authselect apply-changes`
+
+aliases:    files
+automount:  files
+ethers:     files
+group:      files systemd
+hosts:      files dns myhostname ldap
+initgroups: files
+netgroup:   files
+networks:   files
+passwd:     files systemd
+protocols:  files
+publickey:  files
+rpc:        files
+services:   files
+shadow:     files
+bootparams: files
+netmasks:   files
+
