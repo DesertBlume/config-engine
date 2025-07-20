@@ -45,6 +45,12 @@
   loop_control:
     label: "{{ item.name }}"
 
+- name: Template anonymous-aci.ldif
+  template:
+    src: anonymous-aci.ldif.j2
+    dest: /root/anonymous-aci.ldif
+    mode: '0644'
+    
 - name: Template 389 Directory Server instance configuration
   template:
     src: instance.inf.j2
@@ -89,6 +95,20 @@
   loop_control:
     label: "{{ item.item.name }}"
 
+- name: Check if anonymous ACI already exists
+  shell: |
+    ldapsearch -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" \
+    -H "{{ ldap_uri }}" -b "{{ ldap_suffix }}" aci
+  register: aci_check
+  failed_when: false
+  changed_when: false
+
+- name: Apply anonymous ACI if not present
+  command: >
+    ldapmodify -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
+    -H "{{ ldap_uri }}" -f /root/anonymous-aci.ldif
+  when: "'Allow anonymous read of DIT' not in aci_check.stdout"
+    
 - name: Install nslcd and nss-pam-ldapd for LDAP name resolution
   dnf:
     name: nss-pam-ldapd
