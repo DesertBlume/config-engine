@@ -1,0 +1,21 @@
+---
+# Play 1: Configure the mail server (SMTP, IMAP, webmail, etc.)
+- hosts: mailserver
+  become: yes
+  vars_files:
+    - vault.yml
+  vars:
+    # If needed, override or set role-specific variables here
+  roles:
+    - bind           # Configure DNS zone (MX, A records for mail)
+    - postfix       # Install & configure Postfix SMTP server
+    - dovecot       # Install & configure Dovecot IMAP server
+    - podman
+    - firewall      # Apply firewall rules for SMTP access
+
+# Play 2: Configure the mail client (MUA tools and testing)
+- hosts: mailclient
+  become: yes
+  roles:
+    - mailclient    # Install mailx, mutt, and send test emails
+

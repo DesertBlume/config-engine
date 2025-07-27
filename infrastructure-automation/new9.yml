@@ -5,9 +5,5 @@
     - samba_server
     - nfs_server
 
-- name: Configure samba-NFS clients
-  hosts: samba-NFS_clients
-  become: true
-  roles:
-    - verification_client
+
 

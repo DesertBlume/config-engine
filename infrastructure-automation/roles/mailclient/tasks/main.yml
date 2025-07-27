@@ -1,0 +1,50 @@
+- name: Install required mail packages on client
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - postfix
+    - mailx
+    - mutt
+
+- name: Configure Postfix (client role)
+  template:
+    src: main.cf.j2
+    dest: /etc/postfix/main.cf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload postfix
+
+- name: Ensure Postfix is enabled and started
+  service:
+    name: postfix
+    enabled: true
+    state: started
+
+- name: Send test email 1 (direct to server IP)
+  shell: |
+    echo "This is a test email (direct IP)" | mail -s "Test Email 1" "cst8246@[172.16.30.48]"
+  register: mail1
+  changed_when: false
+
+- name: Send test email 2 (to mail hostname)
+  shell: |
+    echo "This is a test email (via mail.example48.lab)" | mail -s "Test Email 2" "cst8246@mail.example48.lab"
+  register: mail2
+  changed_when: false
+
+- name: Send test email 3 (to alias address geeks@example48.lab)
+  shell: |
+    echo "This is a test email (to alias geeks)" | mail -s "Test Email 3" "geeks@{{ domain_name }}"
+  register: mail3
+  changed_when: false
+
+- name: Display mail send results (for verification)
+  debug:
+    msg: |
+      Mail1 result: {{ mail1.stdout }} 
+      Mail2 result: {{ mail2.stdout }} 
+      Mail3 result: {{ mail3.stdout }}
+
+

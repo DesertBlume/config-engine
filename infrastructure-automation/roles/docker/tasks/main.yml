@@ -1,0 +1,57 @@
+- name: Disable RHEL container-tools module (fix runc conflict)
+  ansible.builtin.command: dnf -y module disable container-tools
+  args:
+    warn: false
+
+- name: Clean all DNF cache (prevent filtering bugs)
+  ansible.builtin.command: dnf clean all
+        
+- name: Install dnf plugins core
+  package:
+    name: dnf-plugins-core
+    state: present
+
+- name: Add Docker CE repo
+  command: >
+    dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
+  args:
+    creates: /etc/yum.repos.d/docker-ce.repo
+
+- name: Install Docker packages
+  package:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+    state: present
+
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Add Ansible user to docker group
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+
+- name: Download Docker Compose v1.29.2 binary
+  get_url:
+    url: "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-{{ ansible_system | lower }}-{{ ansible_architecture }}"
+    dest: /usr/local/bin/docker-compose
+    mode: '0755'
+
+- name: Verify docker-compose is installed
+  command: docker-compose --version
+  register: compose_version
+  changed_when: false
+
+- name: Show docker-compose version
+  debug:
+    var: compose_version.stdout
+
+- name: Deploy Roundcube container using Compose
+  import_tasks: roundcube-compose.yml
+

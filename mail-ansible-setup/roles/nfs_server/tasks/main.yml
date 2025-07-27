@@ -1,0 +1,37 @@
+---
+- name: Install NFS packages
+  dnf:
+    name: nfs-utils
+    state: present
+
+- name: Enable and start nfs-server
+  systemd:
+    name: nfs-server
+    enabled: true
+    state: started
+
+- name: Ensure /srv/nfs exists
+  file:
+    path: /srv/nfs
+    state: directory
+    owner: root
+    group: root
+    mode: '0777'
+
+- name: Create readme.nfs with student name
+  copy:
+    content: "Created by Hmoad Hajali\n"
+    dest: /srv/nfs/readme.nfs
+    mode: '0644'
+
+- name: Configure /etc/exports
+  template:
+    src: exports.j2
+    dest: /etc/exports
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Export NFS Shares
+
+
+

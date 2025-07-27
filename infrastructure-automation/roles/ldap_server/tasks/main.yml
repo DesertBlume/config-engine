@@ -1,0 +1,138 @@
+- name: Flush all iptables rules before applying new ones
+  command: iptables -F
+
+- name: Check if 389-ds-base is already installed
+  shell: rpm -q 389-ds-base
+  register: ds_installed
+  failed_when: false
+  changed_when: false
+
+- name: Enable required AppStream repo (if needed)
+  command: subscription-manager repos --enable=rhel-8-for-x86_64-appstream-rpms
+  register: enable_repo
+  failed_when: false
+  changed_when: "'is already enabled' not in enable_repo.stdout"
+  when: ds_installed.rc != 0
+
+- name: Reset existing 389-ds module streams
+  command: dnf module reset 389-ds -y
+  when: ds_installed.rc != 0
+
+- name: Enable 389-ds module stream
+  command: dnf module enable 389-ds -y
+  when: ds_installed.rc != 0
+
+- name: Clean DNF cache
+  command: dnf clean all
+  when: ds_installed.rc != 0
+
+- name: Rebuild DNF cache
+  command: dnf makecache
+  when: ds_installed.rc != 0
+
+- name: Install 389-ds-base
+  dnf:
+    name: 389-ds-base
+    state: present
+  when: ds_installed.rc != 0
+
+- name: Template LDIF files
+  template:
+    src: "{{ item.name }}.ldif.j2"
+    dest: "{{ item.ldif }}"
+    mode: '0644'
+  loop: "{{ ldap_entries }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Template anonymous-aci.ldif
+  template:
+    src: anonymous-aci.ldif.j2
+    dest: /root/anonymous-aci.ldif
+    mode: '0644'
+    
+- name: Template 389 Directory Server instance configuration
+  template:
+    src: instance.inf.j2
+    dest: /root/instance.inf
+    mode: '0600'
+
+- name: Run interactive setup (idempotent method)
+  command: dscreate from-file /root/instance.inf
+  args:
+    creates: /etc/dirsrv/slapd-ldap
+
+- name: Start and enable 389 Directory Server
+  systemd:
+    name: dirsrv@ldap
+    enabled: true
+    state: started
+
+- name: Wait for LDAP server to become available
+  wait_for:
+    host: "{{ ldap_uri | regex_replace('^ldap://', '') | regex_replace('/$', '') }}"
+    port: 389
+    delay: 2
+    timeout: 30
+
+- name: Check if LDAP entries exist
+  shell: >
+    ldapsearch -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
+    -H "{{ ldap_uri }}" -b "{{ item.dn }}" -s base dn
+  register: ldap_entry_check
+  failed_when: false
+  changed_when: false
+  loop: "{{ ldap_entries }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Add LDAP entries if missing
+  command: >
+    ldapadd -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
+    -H "{{ ldap_uri }}" -f {{ item.item.ldif }}
+  when: "'dn: ' ~ item.item.dn not in item.stdout"
+  loop: "{{ ldap_entry_check.results }}"
+  loop_control:
+    label: "{{ item.item.name }}"
+
+- name: Check if anonymous ACI already exists
+  shell: |
+    ldapsearch -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}" \
+    -H "{{ ldap_uri }}" -b "{{ ldap_suffix }}" aci
+  register: aci_check
+  failed_when: false
+  changed_when: false
+
+- name: Apply anonymous ACI if not present
+  command: >
+    ldapmodify -x -D "{{ ldap_bind_dn }}" -w "{{ ldap_bind_pw }}"
+    -H "{{ ldap_uri }}" -f /root/anonymous-aci.ldif
+  when: "'Allow anonymous read of DIT' not in aci_check.stdout"
+    
+- name: Install nslcd and nss-pam-ldapd for LDAP name resolution
+  dnf:
+    name: nss-pam-ldapd
+    state: present
+
+- name: Template nslcd.conf
+  template:
+    src: nslcd.conf.j2
+    dest: /etc/nslcd.conf
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Ensure nslcd is enabled and running
+  systemd:
+    name: nslcd
+    enabled: true
+    state: started
+
+- name: Template nsswitch.conf
+  template:
+    src: nsswitch.conf.j2
+    dest: /etc/nsswitch.conf
+    owner: root
+    group: root
+    mode: '0644'
+

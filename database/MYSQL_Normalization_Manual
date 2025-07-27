@@ -1,0 +1,248 @@
+# Full MySQL Normalization Manual (Ubuntu CLI to GUI)
+
+This guide walks you through:
+
+1. Installing MySQL on Ubuntu  
+2. Creating a normalized database from Table A & B (3NF)  
+3. Inputting data using the CLI  
+4. Visualizing relationships with MySQL Workbench  
+
+---
+
+## Part 1: Install MySQL Server
+
+```bash
+sudo apt update
+sudo apt install mysql-server
+````
+
+Start and enable it:
+
+```bash
+sudo systemctl start mysql
+sudo systemctl enable mysql
+```
+
+Secure it:
+
+```bash
+sudo mysql_secure_installation
+```
+
+---
+
+## Part 2: Access MySQL from the CLI
+
+```bash
+sudo mysql -u root -p
+```
+
+---
+
+## Part 3: Create and Select Database
+
+```sql
+CREATE DATABASE lab9;
+USE lab9;
+```
+
+---
+
+## Part 4: Normalize Table A
+
+### Courses
+
+```sql
+CREATE TABLE Courses (
+    Course_ID INT AUTO_INCREMENT PRIMARY KEY,
+    Course_Title VARCHAR(100),
+    Credit_Hours INT
+);
+```
+
+### Professors
+
+```sql
+CREATE TABLE Professors (
+    Professor_ID INT PRIMARY KEY,
+    Professor_Name VARCHAR(100),
+    First_Day_Work DATE
+);
+```
+
+### Specializations
+
+```sql
+CREATE TABLE Specializations (
+    Specialization_ID INT PRIMARY KEY,
+    Specialization_Name VARCHAR(100)
+);
+```
+
+### prof\_courses (junction)
+
+```sql
+CREATE TABLE prof_courses (
+    Professor_ID INT,
+    Course_ID INT,
+    PRIMARY KEY (Professor_ID, Course_ID),
+    FOREIGN KEY (Professor_ID) REFERENCES Professors(Professor_ID),
+    FOREIGN KEY (Course_ID) REFERENCES Courses(Course_ID)
+);
+```
+
+### prof\_spez (junction)
+
+```sql
+CREATE TABLE prof_spez (
+    Professor_ID INT,
+    Specialization_ID INT,
+    PRIMARY KEY (Professor_ID, Specialization_ID),
+    FOREIGN KEY (Professor_ID) REFERENCES Professors(Professor_ID),
+    FOREIGN KEY (Specialization_ID) REFERENCES Specializations(Specialization_ID)
+);
+```
+
+### Insert Table A Data
+
+```sql
+-- Courses
+INSERT INTO Courses (Course_Title, Credit_Hours) VALUES
+('Accounting', 3),
+('Finance', 3),
+('Marketing', 3),
+('Business Administration', 2);
+
+-- Professors
+INSERT INTO Professors VALUES
+(234, 'Patric', '2008-02-14'),
+(564, 'Mary', '2010-04-15');
+
+-- Specializations
+INSERT INTO Specializations VALUES
+(7, 'Accounting'),
+(5, 'Business Management');
+
+-- Junctions
+INSERT INTO prof_courses VALUES
+(234, 1), (234, 2),
+(564, 3), (564, 4);
+
+INSERT INTO prof_spez VALUES
+(234, 7),
+(564, 5);
+```
+
+---
+
+## Part 5: Normalize Table B
+
+### Employees
+
+```sql
+CREATE TABLE Employees (
+    Employee_ID INT PRIMARY KEY,
+    Employee_Name VARCHAR(100)
+);
+```
+
+### Projects
+
+```sql
+CREATE TABLE Projects (
+    Project_ID INT PRIMARY KEY,
+    Project_Name VARCHAR(100)
+);
+```
+
+### Employee\_Project (junction)
+
+```sql
+CREATE TABLE Employee_Project (
+    Employee_ID INT,
+    Project_ID INT,
+    Assigned_Hours INT,
+    PRIMARY KEY (Employee_ID, Project_ID),
+    FOREIGN KEY (Employee_ID) REFERENCES Employees(Employee_ID),
+    FOREIGN KEY (Project_ID) REFERENCES Projects(Project_ID)
+);
+```
+
+### Insert Table B Data
+
+```sql
+INSERT INTO Employees VALUES
+(100, 'Cedric'),
+(200, 'Natali'),
+(300, 'Maria');
+
+INSERT INTO Projects VALUES
+(101, 'Acct.'),
+(110, 'Finance'),
+(111, 'BD');
+
+INSERT INTO Employee_Project VALUES
+(100, 101, 13),
+(200, 110, 15),
+(300, 111, 12);
+```
+
+---
+
+## Part 6: Install MySQL Workbench
+
+### Option A: Easy (Snap)
+
+```bash
+sudo snap install mysql-workbench-community
+```
+
+### Option B: Latest Version (via APT)
+
+```bash
+wget https://dev.mysql.com/get/mysql-apt-config_0.8.29-1_all.deb
+sudo dpkg -i mysql-apt-config_0.8.29-1_all.deb
+sudo apt update
+sudo apt install mysql-workbench
+```
+
+---
+
+## Part 7: Reverse Engineer into ER Diagram
+
+1. Open MySQL Workbench
+2. Connect to localhost (use `admin` if you created that user)
+3. Go to: `Database → Reverse Engineer`
+4. Select the `lab9` database
+5. Click “Place objects on canvas”
+6. View and inspect your ER diagram visually
+
+---
+
+## MySQL CLI & Linux Cheatsheet
+
+| Command                                       | Description                                      |
+| --------------------------------------------- | ------------------------------------------------ |
+| `sudo apt update`                             | Refreshes package lists from repositories        |
+| `sudo apt install mysql-server`               | Installs MySQL server                            |
+| `sudo systemctl start mysql`                  | Starts the MySQL service                         |
+| `sudo systemctl enable mysql`                 | Enables MySQL to start at boot                   |
+| `sudo mysql_secure_installation`              | Secures MySQL by setting root password, etc.     |
+| `sudo mysql -u root -p`                       | Logs into MySQL CLI as root with password prompt |
+| `CREATE DATABASE lab9;`                       | Creates a new database named lab9                |
+| `USE lab9;`                                   | Selects the lab9 database for use                |
+| `SHOW DATABASES;`                             | Lists all databases                              |
+| `SELECT DATABASE();`                          | Shows the currently selected database            |
+| `SHOW TABLES;`                                | Lists all tables in the current database         |
+| `DESCRIBE table_name;`                        | Displays the structure of a table                |
+| `RENAME TABLE old TO new;`                    | Renames a table                                  |
+| `SHOW CREATE TABLE table_name;`               | Shows the SQL used to create a table             |
+| `CREATE TABLE ...`                            | Creates a new table                              |
+| `INSERT INTO ... VALUES (...);`               | Inserts data into a table                        |
+| `SELECT * FROM table;`                        | Displays all rows in a table                     |
+| `sudo snap install mysql-workbench-community` | Installs MySQL Workbench using Snap              |
+| `wget <url>`                                  | Downloads a file from the web                    |
+| `sudo dpkg -i file.deb`                       | Installs a .deb package manually                 |
+| `sudo apt install mysql-workbench`            | Installs MySQL Workbench using APT               |
+
+

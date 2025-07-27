@@ -1,0 +1,35 @@
+---
+- name: Ensure tmux is installed
+  package:
+    name: tmux
+    state: present
+
+- name: Deploy mount and test script
+  template:
+    src: mount_and_test_all.sh.j2
+    dest: /home/cst8246/mount_and_test_all.sh
+    owner: cst8246
+    group: cst8246
+    mode: '0755'
+
+- name: Execute mount and test script (non-tmux)
+  become: true
+  become_user: root
+  shell: /home/cst8246/mount_and_test_all.sh
+  args:
+    executable: /bin/bash
+
+- name: Start tmux session for verifications
+  become: true
+  become_user: root
+  shell: |
+    tmux new-session -d -s verify_lab9 'watch cat /mnt/pub-u1/u1_pub.txt'
+    tmux split-window -h -t verify_lab9 'watch cat /mnt/pub-u2/u2_pub.txt'
+    tmux select-layout -t verify_lab9 tiled
+    tmux split-window -v -t verify_lab9 'watch cat /mnt/priv-u1/u1_priv.txt'
+    tmux split-window -v -t verify_lab9 'watch cat /mnt/nfs/nfs_test.txt'
+    tmux split-window -v -t verify_lab9 'watch cat /mnt/priv-u2/u2_priv.txt || echo "Read failed"'
+    tmux select-layout -t verify_lab9 tiled
+  args:
+    executable: /bin/bash
+

@@ -1,0 +1,17 @@
+#
+# LDAP Defaults
+#
+
+BASE    {{ ldap_suffix }}
+URI     {{ ldap_uri }}
+
+#SIZELIMIT	12
+#TIMELIMIT	15
+#DEREF		never
+
+# TLS and Crypto policies (disabled for lab)
+#TLS_CACERT	/etc/pki/tls/cert.pem
+#TLS_CIPHER_SUITE PROFILE=SYSTEM
+
+SASL_NOCANON	on
+

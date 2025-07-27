@@ -1,0 +1,5 @@
+# templates/dovecot-10-auth.conf.j2
+disable_plaintext_auth = {{ dovecot_disable_plaintext_auth }}
+auth_mechanisms = {{ dovecot_auth_mechanisms }}
+!include auth-system.conf.ext
+

@@ -1,0 +1,18 @@
+<VirtualHost {{ server_ip }}:80>
+  ServerName www.{{ primary_domain }}
+  DocumentRoot /var/www/vhosts/www.{{ primary_domain }}/html/
+</VirtualHost>
+
+<VirtualHost {{ server_ip }}:80>
+  ServerName www.{{ secondary_domain }}
+  DocumentRoot /var/www/vhosts/www.{{ secondary_domain }}/html/
+</VirtualHost>
+
+<VirtualHost {{ alias_ip }}:443>
+  ServerName secure.{{ primary_domain }}
+  DocumentRoot /var/www/vhosts/secure.{{ primary_domain }}/html/
+  SSLEngine on
+  SSLCertificateFile /etc/httpd/tls/cert/{{ primary_domain }}.cert
+  SSLCertificateKeyFile /etc/httpd/tls/key/{{ primary_domain }}.key
+</VirtualHost>
+

@@ -1,0 +1,82 @@
+- name: Install Apache
+  package:
+    name:
+      - httpd
+      - mod_ssl
+    state: present
+
+- name: Disable default ssl.conf
+  file:
+    path: /etc/httpd/conf.d/ssl.conf
+    state: absent
+
+- name: Deploy vhosts.conf
+  template:
+    src: vhosts.conf.j2
+    dest: /etc/httpd/conf.d/vhosts.conf
+  notify: restart httpd
+
+- name: Ensure Listen 443 is in httpd.conf
+  lineinfile:
+    path: /etc/httpd/conf/httpd.conf
+    line: 'Listen 443'
+    insertafter: '^Listen 80'
+    state: present
+  notify: restart httpd
+
+- name: Ensure TLS directories exist
+  file:
+    path: "/etc/httpd/tls/{{ item }}"
+    state: directory
+    mode: "{{ '0700' if item == 'key' else '0755' }}"
+  loop:
+    - key
+    - cert
+
+- name: Generate self-signed cert if not exists
+  command: >
+    openssl req -x509 -newkey rsa:2048 -days 365 -nodes
+    -keyout /etc/httpd/tls/key/{{ primary_domain }}.key
+    -out /etc/httpd/tls/cert/{{ primary_domain }}.cert
+    -subj "/C=CA/ST=ON/L=Ottawa/O=College/OU=IT/CN=secure.{{ primary_domain }}"
+  args:
+    creates: "/etc/httpd/tls/cert/{{ primary_domain }}.cert"
+
+- name: Set correct permissions for key
+  file:
+    path: "/etc/httpd/tls/key/{{ primary_domain }}.key"
+    mode: "0600"
+
+- name: Set correct permissions for cert
+  file:
+    path: "/etc/httpd/tls/cert/{{ primary_domain }}.cert"
+    mode: "0644"
+
+- name: Ensure vhost web root directories exist
+  file:
+    path: "/var/www/vhosts/{{ item.name }}/html"
+    state: directory
+    mode: '0755'
+    recurse: yes
+  loop: "{{ apache_vhosts }}"
+
+- name: Create index.html for each vhost
+  copy:
+    dest: "/var/www/vhosts/{{ item.name }}/html/index.html"
+    content: |
+      <html>
+      <head><title>{{ item.title }}</title></head>
+      <body>
+      <h1>Welcome to {{ item.title }}</h1>
+      <p>This is the {{ item.name }} site, served from {{ ansible_hostname }}</p>
+      </body>
+      </html>
+    mode: '0644'
+  loop: "{{ apache_vhosts }}"
+
+- name: Ensure Apache is running
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+

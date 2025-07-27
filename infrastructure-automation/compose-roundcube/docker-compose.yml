@@ -1,0 +1,16 @@
+# ~/roundcube-compose/docker-compose.yml
+version: "3"
+
+services:
+  roundcube:
+    image: roundcube/roundcubemail:latest
+    container_name: roundcube
+    ports:
+      - "8080:80"
+    environment:
+      ROUNDCUBEMAIL_DEFAULT_HOST: 172.16.30.48
+      ROUNDCUBEMAIL_SMTP_SERVER: 172.16.30.48
+      ROUNDCUBEMAIL_DB_TYPE: sqlite
+      ROUNDCUBEMAIL_INSTALL_PLUGINS: "true"
+      ROUNDCUBEMAIL_SKIN: elastic
+

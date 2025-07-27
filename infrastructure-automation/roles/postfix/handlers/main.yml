@@ -1,0 +1,11 @@
+- name: Restart Postfix
+  service:
+    name: postfix
+    state: restarted
+
+- name: Rebuild aliases
+  command: newaliases
+
+- name: Postmap virtual
+  command: postmap /etc/postfix/virtual
+

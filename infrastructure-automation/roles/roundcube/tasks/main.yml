@@ -1,0 +1,70 @@
+- name: Ensure Apache and PHP are installed (prerequisites for Roundcube)
+  package:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - httpd
+    - php
+    - php-mbstring
+    - php-mysqlnd       # needed if using MySQL for Roundcube (or php-sqlite if using SQLite)
+    - php-intl          # and other PHP extensions as needed for Roundcube
+  tags: roundcube_prereq
+
+- name: Download Roundcube {{ roundcube_version }} tarball
+  ansible.builtin.get_url:
+    url: "{{ roundcube_archive_url }}"
+    dest: "/tmp/roundcube.tar.gz"
+    mode: '0644'
+    # You can skip this line if you don't want to validate checksum
+    # checksum: "sha256:<hash-goes-here>"
+    
+#- name: Download Roundcube {{ roundcube_version }} tarball
+#  get_url:
+#    url: "{{ roundcube_archive_url }}"
+#    dest: "/tmp/roundcube.tar.gz"
+#    mode: '0644'
+
+- name: Extract Roundcube archive
+  unarchive:
+    src: "/tmp/roundcube.tar.gz"
+    dest: "{{ roundcube_install_dir }}-{{ roundcube_version }}"
+    remote_src: yes
+
+- name: Move Roundcube files to target directory
+  command: "mv {{ roundcube_install_dir }}-{{ roundcube_version }}/ {{ roundcube_install_dir }}"
+  args:
+    removes: "{{ roundcube_install_dir }}"   # ensure target doesn't already exist
+  when: roundcube_version is defined
+
+- name: Set ownership of Roundcube files to Apache user
+  file:
+    path: "{{ roundcube_install_dir }}"
+    state: directory
+    recurse: yes
+    owner: "apache"
+    group: "apache"
+  # Using file module in recurse mode to chown everything under the directory
+  # This is equivalent to `chown -R apache:apache {{ roundcube_install_dir }}`:contentReference[oaicite:22]{index=22}
+
+- name: Configure Apache virtual host for Roundcube
+  template:
+    src: "roundcube-vhost.conf.j2"
+    dest: "/etc/httpd/conf.d/roundcube.conf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Reload Apache
+
+# (Optional) Task to configure Roundcube (e.g., DB setup, config file) could go here
+# - name: Configure Roundcube main config
+#   template:
+#     src: "roundcube-config.inc.php.j2"
+#     dest: "{{ roundcube_install_dir }}/config/config.inc.php"
+#   notify: Reload Apache
+
+- name: Ensure Apache is running and enabled
+  service:
+    name: httpd
+    state: started
+    enabled: yes
+

@@ -1,0 +1,17 @@
+uid nslcd
+gid ldap
+
+uri {{ ldap_uri }}
+base {{ ldap_suffix }}
+base hosts ou=hosts,{{ ldap_suffix }}
+
+{% if ldap_bind_dn and ldap_bind_pw %}
+binddn {{ ldap_bind_dn }}
+bindpw {{ ldap_bind_pw }}
+{% endif %}
+
+# Uncomment or tune below as needed
+#ssl start_tls
+#tls_reqcert never
+#tls_cacertdir /etc/ssl/certs
+

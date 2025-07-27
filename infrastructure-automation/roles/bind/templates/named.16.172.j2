@@ -1,0 +1,20 @@
+$TTL 86400
+$ORIGIN 16.172.in-addr.arpa.
+
+@       IN SOA ns1.{{ primary_domain }}. dnsadmin.{{ primary_domain }}. (
+            20250710
+            28800
+            14400
+            604800
+            86400 )
+
+        IN NS   ns1.{{ primary_domain }}.
+        IN NS   ns2.{{ primary_domain }}.
+
+48.30   IN PTR ns1.{{ primary_domain }}.
+48.30   IN PTR www.{{ primary_domain }}.
+48.30   IN PTR www.{{ secondary_domain }}.
+48.31   IN PTR ns2.{{ primary_domain }}.
+48.32   IN PTR ftp.{{ primary_domain }}.
+48.32   IN PTR secure.{{ primary_domain }}.
+

@@ -1,0 +1,16 @@
+- name: Ensure roundcube-compose directory exists
+  file:
+    path: /opt/roundcube-compose
+    state: directory
+
+- name: Copy docker-compose.yml to the server
+  copy:
+    src: compose-roundcube/docker-compose.yml
+    dest: /opt/roundcube-compose/docker-compose.yml
+    mode: '0644'
+
+- name: Deploy Roundcube container
+  command: docker-compose up -d
+  args:
+    chdir: /opt/roundcube-compose
+

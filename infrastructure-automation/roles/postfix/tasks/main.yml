@@ -1,0 +1,38 @@
+- name: Install Postfix
+  package:
+    name: postfix
+    state: present
+
+- name: Configure Postfix main.cf
+  template:
+    src: "main.cf.j2"
+    dest: "/etc/postfix/main.cf"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Postfix
+
+- name: Deploy virtual alias file
+  template:
+    src: "virtual.j2"
+    dest: "/etc/postfix/virtual"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Postmap virtual
+
+- name: Set up mail alias for '{{ aliased_mail }}'
+  lineinfile:
+    path: "/etc/aliases"
+    create: yes
+    regexp: "^{{ aliased_mail }}:"
+    line: "{{ aliased_mail }}: {{ aliased_mail_recipients | join(', ') }}"
+  notify: Rebuild aliases
+
+  
+- name: Ensure Postfix is running and enabled
+  service:
+    name: postfix
+    state: started
+    enabled: yes
+

@@ -1,0 +1,16 @@
+$TTL 86400
+$ORIGIN {{ secondary_domain }}.
+
+@       IN SOA {{ secondary_domain }}. dnsadmin.{{ secondary_domain }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ primary_domain }}.
+
+
+ns1     IN A {{ server_ip }}
+www     IN A {{ server_ip }}
+

@@ -1,0 +1,66 @@
+- name: Flush all iptables rules before applying new ones
+  command: iptables -F
+
+
+- name: Set iptables default policies to ACCEPT
+  command: iptables -P {{ item.chain }} ACCEPT
+  loop:
+    - { chain: 'INPUT' }
+    - { chain: 'FORWARD' }
+    - { chain: 'OUTPUT' }
+
+  
+- name: Allow SMTP from internal subnet 172.16.30.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ internal_nets[0] }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow SMTP from client subnet 172.16.31.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ internal_nets[1] }}"
+    jump: ACCEPT
+    state: present
+
+- name: Reject SMTP from subnet 172.16.32.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ blocked_net }}"
+    jump: REJECT
+    state: present
+  
+- name: Allow access to LDAP from alias subnet 172.16.32.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ internal_nets[3] }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow access to LDAP from client subnet 172.16.31.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ internal_nets[1] }}"
+    jump: ACCEPT
+    state: present
+
+- name: Reject access to LDAP from internal subnet 172.16.30.0/24
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ internal_nets[0] }}"
+    jump: REJECT
+    state: present
+

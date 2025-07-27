@@ -1,0 +1,16 @@
+[general]
+config_version = 2
+
+[slapd]
+instance_name = ldap
+root_password = {{ ldap_bind_pw }}
+self_sign_cert = false
+port = 389
+start = True
+# Using system hostname; no need to specify if you want to keep default
+
+[backend-userroot]
+suffix = {{ ldap_suffix }}
+create_suffix_entry = false
+sample_entries = no
+
