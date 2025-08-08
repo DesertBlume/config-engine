@@ -1,0 +1,213 @@
+
+- name: Flush all iptables rules before applying new ones
+  command: iptables -F
+# ─────────────────────────────
+# 🔐 Allow loopback and established connections
+# ─────────────────────────────
+- name: Allow loopback traffic
+  iptables:
+    chain: INPUT
+    in_interface: lo
+    jump: ACCEPT
+    state: present
+
+- name: Allow established and related traffic
+  iptables:
+    chain: INPUT
+    ctstate: ESTABLISHED,RELATED
+    jump: ACCEPT
+    state: present
+
+- name: Allow established and related traffic
+  iptables:
+    chain: OUTPUT
+    ctstate: ESTABLISHED,RELATED
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from client subnet (172.16.31.0/24)
+  iptables:
+    chain: INPUT
+    source: "{{ client_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from host network (172.16.0.0/24)
+  iptables:
+    chain: INPUT
+    source: "172.16.0.0/24"
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from client subnet (172.16.31.0/24)
+  iptables:
+    chain: OUTPUT
+    source: "{{ client_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from host network (172.16.0.0/24)
+  iptables:
+    chain: OUTPUT
+    source: "172.16.0.0/24"
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from client subnet (172.16.31.0/24)
+  iptables:
+    chain: FORWARD
+    source: "{{ client_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow all traffic from host network (172.16.0.0/24)
+  iptables:
+    chain: FORWARD
+    source: "172.16.0.0/24"
+    jump: ACCEPT
+    state: present
+
+    
+- name: Set iptables default policies to DROP
+  command: iptables -P {{ item.chain }} DROP
+  loop:
+    - { chain: 'INPUT' }
+
+# ─────────────────────────────
+# 🌐 DNS (Port 53)
+# ─────────────────────────────
+- name: Allow DNS (UDP)
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 53
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow DNS (TCP)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 53
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+# ─────────────────────────────
+# 🌐 Web (HTTP 80, HTTPS 443)
+# ─────────────────────────────
+- name: Allow HTTP
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow HTTPS
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 443
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+# ─────────────────────────────
+# 📁 Samba
+# ─────────────────────────────
+- name: Allow Samba TCP 139
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 139
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow Samba TCP 445
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 445
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow Samba UDP 137
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 137
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow Samba UDP 138
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 138
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+# ─────────────────────────────
+# 📦 NFS (2049 + rpcbind + mountd)
+# ─────────────────────────────
+- name: Allow NFS (TCP)
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 2049
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow NFS (UDP)
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 2049
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow rpcbind TCP
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 111
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow rpcbind UDP
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 111
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow mountd TCP
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 20048
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow mountd UDP
+  iptables:
+    chain: INPUT
+    protocol: udp
+    destination_port: 20048
+    source: "{{ full_network }}"
+    jump: ACCEPT
+    state: present
+

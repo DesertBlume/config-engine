@@ -1,0 +1,45 @@
+[global]
+	workgroup = SAMBA
+	security = user
+	passdb backend = tdbsam
+	printing = cups
+	printcap name = cups
+	load printers = yes
+	cups options = raw
+	include = /etc/samba/usershares.conf
+
+[homes]
+	comment = Home Directories
+	valid users = %S, %D%w%S
+	browseable = No
+	read only = No
+	inherit acls = Yes
+
+[printers]
+	comment = All Printers
+	path = /var/tmp
+	printable = Yes
+	create mask = 0600
+	browseable = No
+
+[print$]
+	comment = Printer Drivers
+	path = /var/lib/samba/drivers
+	write list = @printadmin root
+	force group = @printadmin
+	create mask = 0664
+	directory mask = 0775
+
+[samba-public]
+   path = {{ samba_public_path }}
+   browseable = yes
+   writable = yes
+   guest ok = yes
+   read only = no
+
+[samba-private]
+   path = {{ samba_private_path }}
+   browseable = no
+   valid users = {{ samba_valid_users | join(', ') }}
+   write list = {{ samba_write_users | join(', ') }}
+   read only = no

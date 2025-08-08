@@ -1,0 +1,13 @@
+# Managed by Ansible - dynamic zones.conf
+
+{% for zone in zones %}
+zone "{{ zone.name }}" IN {
+  type master;
+  file "{{ zone.file }}";
+  allow-transfer { {{ ns2_ip }}; };  // allow zone transfers to slave
+  also-notify { {{ ns2_ip }}; };     // notify slave when zone changes
+  notify yes;
+  allow-update { none; };
+};
+{% endfor %}
+

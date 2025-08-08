@@ -1,0 +1,17 @@
+$TTL 86400
+$ORIGIN {{ bind_domain }}.
+
+@   IN SOA ns1.{{ bind_domain }}. dnsadmin.{{ bind_domain }}. (
+        {{ bind_serial }}
+        3600
+        900
+        604800
+        86400 )
+
+    IN NS ns1.{{ bind_domain }}.
+    IN NS ns2.{{ bind_domain }}.
+
+{% for rec in bind_a_records %}
+{{ rec.name }}    IN A {{ rec.ip }}
+{% endfor %}
+

@@ -1,0 +1,6 @@
+---
+- name: Restart Samba
+  systemd:
+    name: smb
+    state: restarted
+

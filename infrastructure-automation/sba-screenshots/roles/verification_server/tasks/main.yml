@@ -1,0 +1,25 @@
+- name: Ensure output file is clean
+  copy:
+    content: ""
+    dest: /home/ansible/verification.log
+    force: true
+    owner: ansible
+    group: ansible
+    mode: '0644'
+  become: false
+
+- name: Copy verification helper script
+  template:
+    src: verify.sh.j2
+    dest: /home/ansible/verify_helper.sh
+    owner: ansible
+    group: ansible
+    mode: '0755'
+  become: false
+
+- name: Run full verification suite as ansible (non-root)
+  shell: /home/ansible/verify_helper.sh >> /home/ansible/verification.log 2>&1
+  args:
+    executable: /bin/bash
+  become: false
+

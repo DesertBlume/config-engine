@@ -1,0 +1,39 @@
+# =============================
+# Global DNS Master Configuration
+# =============================
+
+# Container image
+bind_container_image: "docker.io/internetsystemsconsortium/bind9:9.18"
+
+# Domain settings
+bind_domain: "blue.lab"
+bind_serial: "{{ '%Y%m%d01' | strftime }}"  # auto‑generate daily serial
+
+# IP addresses
+bind_primary_ip: "172.16.30.48"   # master primary IP
+bind_alias_ip: "172.16.32.48"     # master alias IP (for secure site)
+bind_slave_ip: "172.16.31.48"     # slave server IP
+
+# Network settings
+bind_listen_ipv4:
+  - "127.0.0.1"
+  - "{{ bind_primary_ip }}"
+  - "{{ bind_alias_ip }}"
+
+# Zone PTR mapping
+bind_ptr_primary:
+  - { octet: "48", fqdn: "ns1.{{ bind_domain }}" }
+  - { octet: "48", fqdn: "www1.{{ bind_domain }}" }
+  - { octet: "48", fqdn: "www2.{{ bind_domain }}" }
+
+bind_ptr_alias:
+  - { octet: "48", fqdn: "secure.{{ bind_domain }}" }
+
+# Forward zone A records
+bind_a_records:
+  - { name: "ns1", ip: "{{ bind_primary_ip }}" }
+  - { name: "ns2", ip: "{{ bind_slave_ip }}" }
+  - { name: "www1", ip: "{{ bind_primary_ip }}" }
+  - { name: "www2", ip: "{{ bind_primary_ip }}" }
+  - { name: "secure", ip: "{{ bind_alias_ip }}" }
+

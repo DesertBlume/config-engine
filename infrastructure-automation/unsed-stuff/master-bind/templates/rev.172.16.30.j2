@@ -1,0 +1,17 @@
+$TTL 86400
+$ORIGIN 30.16.172.in-addr.arpa.
+
+@   IN SOA ns1.{{ bind_domain }}. dnsadmin.{{ bind_domain }}. (
+        {{ bind_serial }}
+        3600
+        900
+        604800
+        86400 )
+
+    IN NS ns1.{{ bind_domain }}.
+    IN NS ns2.{{ bind_domain }}.
+
+{% for ptr in bind_ptr_primary %}
+{{ ptr.octet }} IN PTR {{ ptr.fqdn }}.
+{% endfor %}
+

@@ -1,0 +1,67 @@
+---
+- name: Ensure directories for bind config and zones exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "53"
+    group: "53"
+    mode: "0750"
+  loop:
+    - /opt/named/config
+    - /opt/named/zones
+
+- name: Deploy named.conf
+  template:
+    src: named.conf.j2
+    dest: /opt/named/config/named.conf
+    owner: "53"
+    group: "53"
+    mode: "0640"
+
+- name: Deploy forward zone file
+  template:
+    src: fwd.blue.lab.j2
+    dest: /opt/named/zones/fwd.{{ bind_domain }}
+    owner: "53"
+    group: "53"
+    mode: "0640"
+
+- name: Deploy reverse zone for primary IP
+  template:
+    src: rev.172.16.30.j2
+    dest: /opt/named/zones/rev.{{ bind_primary_ip.split('.')[:3] | join('.') }}
+    owner: "53"
+    group: "53"
+    mode: "0640"
+
+- name: Deploy reverse zone for alias IP
+  template:
+    src: rev.172.16.32.j2
+    dest: /opt/named/zones/rev.{{ bind_alias_ip.split('.')[:3] | join('.') }}
+    owner: "53"
+    group: "53"
+    mode: "0640"
+
+- name: Remove existing bind-master container (if exists)
+  containers.podman.podman_container:
+    name: bind-master
+    state: absent
+
+- name: Run bind-master container
+  containers.podman.podman_container:
+    name: bind-master
+    image: "{{ bind_container_image }}"
+    state: started
+    recreate: true
+    hostname: bind-master
+    network: host
+    volume:
+      - /opt/named/config/named.conf:/etc/named.conf:Z
+      - /opt/named/zones:/var/named:Z
+    command:
+      - -c
+      - /etc/named.conf
+      - -g
+      - -u
+      - bind
+

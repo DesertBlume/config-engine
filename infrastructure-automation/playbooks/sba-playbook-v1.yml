@@ -1,0 +1,16 @@
+- hosts: dns-masters
+  become: true
+  roles:
+    - common
+    - bind-master
+    - apache-blue
+    - samba
+    - nfs
+    - iptables
+    - verification_server
+
+- hosts: dns-slaves
+  become: true
+  roles:
+    - bind_slave
+    - verification_client

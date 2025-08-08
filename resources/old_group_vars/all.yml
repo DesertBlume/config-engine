@@ -1,0 +1,132 @@
+# ─────────────────────────────
+# 🔐 Ansible Access
+# ─────────────────────────────
+ansible_user: foo
+ansible_become: true
+ansible_become_password: "bar"  # Consider using Ansible Vault for this in production-like setups
+
+# ─────────────────────────────
+# 🌐 Network & Domain Settings
+# ─────────────────────────────
+primary_domain: "example48.lab"
+secondary_domain: "site48.lab"
+
+primary_title: "Example48"
+secondary_title: "Site48"
+
+server_ip: "172.16.30.48"
+client_ip: "172.16.31.48"
+alias_ip: "172.16.32.48"         # Used for LDAP host entry
+gateway_ip: "172.16.0.1"         # Default gateway (router)
+
+server_network: "172.16.30.0/24"
+client_network: "172.16.31.0/24"
+alias_network: "172.16.32.0/24"
+
+internal_networks:
+  - "127.0.0.0/8"
+  - "{{ server_network }}"
+  - "{{ client_network }}"
+  - "{{ alias_network }}"
+  - "172.16.0.0/24"
+
+blocked_network: "172.16.32.0/24"
+
+# ─────────────────────────────
+# 📛 Hostname Aliases
+# ─────────────────────────────
+mail_server_ip: "{{ server_ip }}"
+mail_client_ip: "{{ client_ip }}"
+
+# ─────────────────────────────
+# 📚 DNS Settings
+# ─────────────────────────────
+dns_zones:
+  - name: "{{ primary_domain }}"
+    file: "fwd.{{ primary_domain }}"
+  - name: "{{ secondary_domain }}"
+    file: "fwd.{{ secondary_domain }}"
+  - name: "16.172.in-addr.arpa"
+    file: "named.16.172"
+
+# ─────────────────────────────
+# 🌐 Apache VHosts
+# ─────────────────────────────
+apache_vhosts:
+  - name: "www.{{ primary_domain }}"
+    title: "{{ primary_title }} Lab Site"
+  - name: "www.{{ secondary_domain }}"
+    title: "{{ secondary_title }} Lab Site"
+  - name: "secure.{{ primary_domain }}"
+    title: "Secure {{ primary_title }} Lab Site"
+
+# ─────────────────────────────
+# 📧 Postfix & Mail Settings
+# ─────────────────────────────
+postfix_mynetworks: "{{ internal_networks | join(' ') }}"
+postfix_inet_interfaces: "127.0.0.1, {{ mail_server_ip }}"
+postfix_masquerade_domain: "{{ primary_domain }}"
+
+dovecot_mail_location: "maildir:~/Maildir"
+dovecot_disable_plaintext_auth: "no"
+dovecot_auth_mechanisms: "plain login"
+mail_hostname: "mail.{{ primary_domain }}"
+mail_domain: "{{ primary_domain }}"
+maildir_base_path_template: "/home/%s/Maildir"
+
+aliased_mail: "geeks"
+aliased_mail_recipient:
+  - cst8246
+  - abc
+
+
+mail_users:
+  - root
+  - cst8246
+  - desertblume
+  - abc
+
+# ─────────────────────────────
+# 📬 Roundcube Webmail
+# ─────────────────────────────
+roundcube_version: "1.5.11"
+roundcube_archive_url: "https://github.com/roundcube/roundcubemail/releases/download/{{ roundcube_version }}/roundcubemail-{{ roundcube_version }}-complete.tar.gz"
+roundcube_install_dir: "/var/www/html/roundcube"
+roundcube_web_alias: "/webmail"
+
+# ─────────────────────────────
+# 🔐 LDAP Settings
+# ─────────────────────────────
+ldap_uri: "ldap://{{ server_ip }}"
+ldap_suffix: "dc=example48,dc=lab"
+ldap_bind_dn: "cn=Directory Manager"
+ldap_bind_pw: "cst8246cst8246"  # Consider using Ansible Vault for this in production-like setups
+ldap_domain: "{{ primary_domain }}"  # Added: Defines ldap_domain based on primary_domain for use in LDIF templates
+
+ldap_entries:
+  - name: base
+    dn: "dc=example48,dc=lab"
+    ldif: "/root/base.ldif"
+  - name: accounts_ou
+    dn: "ou=accounts,dc=example48,dc=lab"
+    ldif: "/root/ou.ldif"
+  - name: users
+    dn: "uid=linuser1,ou=accounts,dc=example48,dc=lab"
+    ldif: "/root/users.ldif"
+  - name: groups
+    dn: "cn=users,ou=groups,dc=example48,dc=lab"
+    ldif: "/root/group.ldif"
+  - name: hosts
+    dn: "cn=happy.example48.lab,ou=hosts,dc=example48,dc=lab"
+    ldif: "/root/hosts.ldif"
+
+# ─────────────────────────────
+# 🧍‍♂️ User Hashes (LDAP / Mail)
+# ─────────────────────────────
+desertblume_password_hash: "<provided-hash>"  # Consider using Ansible Vault for this in production-like setups
+
+# ─────────────────────────────
+# 🌐 Common Service Ports
+# ─────────────────────────────
+http_port: "80"
+https_port: "443"

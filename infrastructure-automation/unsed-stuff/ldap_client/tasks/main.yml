@@ -1,0 +1,56 @@
+---
+# Install LDAP client packages
+- name: Install LDAP client packages
+  dnf:
+    name:
+      - openldap
+      - openldap-clients
+      - nss-pam-ldapd
+    state: present
+
+# Configure LDAP client files
+- name: Template /etc/openldap/ldap.conf
+  template:
+    src: ldap.conf.j2
+    dest: /etc/openldap/ldap.conf
+    mode: '0644'
+
+- name: Template /etc/nslcd.conf
+  template:
+    src: nslcd.conf.j2
+    dest: /etc/nslcd.conf
+    mode: '0600'
+  notify: restart_nslcd  # Added: Notify handler to restart nslcd on config change
+
+- name: Template /etc/authselect/user-nsswitch.conf
+  template:
+    src: user-nsswitch.conf.j2
+    dest: /etc/authselect/user-nsswitch.conf
+    mode: '0644'
+  register: nss_template  # Added: Register to check if file changed
+
+- name: Apply NSS configuration via authselect (only if changed)
+  command: authselect apply-changes
+  when: nss_template.changed  # Added: Conditional to improve idempotency
+
+# Manage nslcd service
+- name: Enable and start nslcd
+  systemd:
+    name: nslcd
+    enabled: true
+    state: started
+
+# Verify LDAP client resolution (added for testing)
+- name: Verify LDAP user resolution (e.g., linuser1)
+  command: getent passwd linuser1
+  register: user_verify
+  failed_when: "'linuser1' not in user_verify.stdout"
+  changed_when: false
+  ignore_errors: true  # Added: Ignore errors if just testing; fail playbook only if critical
+
+- name: Verify LDAP host resolution (e.g., happy.example48.lab)
+  command: getent hosts happy.{{ ldap_domain }}
+  register: host_verify
+  failed_when: "'172.16.32.48' not in host_verify.stdout"
+  changed_when: false
+  ignore_errors: true  # Added: Ignore errors if just testing

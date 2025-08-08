@@ -1,0 +1,56 @@
+- name: Install Samba packages
+  dnf:
+    name: "{{ samba_packages }}"
+    state: present
+
+- name: Ensure public share directory exists
+  file:
+    path: "{{ samba_public_path }}"
+    state: directory
+    mode: '0777'
+
+- name: Create samba users
+  loop: "{{ samba_valid_users }}"
+  loop_control:
+    loop_var: samba_user
+  user:
+    name: "{{ samba_user }}"
+    state: present
+
+- name: Set samba passwords
+  loop: "{{ samba_valid_users }}"
+  loop_control:
+    loop_var: samba_user
+  expect:
+    command: "smbpasswd -a {{ samba_user }}"
+    responses:
+      (?i)New SMB password: "{{ samba_user }}\n"
+      (?i)Retype new SMB password: "{{ samba_user }}\n"
+
+- name: Ensure private share directory exists
+  file:
+    path: "{{ samba_private_path }}"
+    state: directory
+    mode: '0770'
+    owner: "{{ samba_write_users[0] }}"
+    group: "{{ samba_write_users[0] }}"
+
+
+- name: Set ACL for read-only user
+  command: "setfacl -m u:{{ samba_valid_users[1] }}:rx {{ samba_private_path }}"
+
+- name: Deploy smb.conf
+  template:
+    src: smb.conf.j2
+    dest: /etc/samba/smb.conf
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Samba
+
+- name: Enable and start smb service
+  systemd:
+    name: smb
+    enabled: true
+    state: started
+

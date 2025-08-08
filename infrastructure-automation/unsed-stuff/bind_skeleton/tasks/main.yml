@@ -1,0 +1,37 @@
+- name: Install bind packages
+  package:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Deploy zone files (forward + reverse)
+  template:
+    src: "{{ item.file }}.j2"
+    dest: "/var/named/{{ item.file }}"
+    owner: named
+    group: named
+    mode: '0640'
+  loop: "{{ dns_zones }}"
+  notify: restart named
+
+- name: Deploy zones.conf dynamically
+  template:
+    src: zones.conf.j2
+    dest: /etc/named/zones.conf
+  notify: restart named
+
+- name: Ensure zones.conf include is at the end of named.conf
+  lineinfile:
+    path: /etc/named.conf
+    line: 'include "/etc/named/zones.conf";'
+    insertafter: EOF
+    state: present
+  notify: restart named
+
+- name: Ensure named is running
+  service:
+    name: named
+    state: started
+    enabled: yes
+

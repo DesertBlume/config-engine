@@ -1,0 +1,158 @@
+## **1️⃣ Make the directories**
+
+Inside your RHEL VM:
+
+mkdir -p /opt/named/config
+mkdir -p /opt/named/zones
+
+
+---
+
+## **2️⃣ Set ownership & permissions for `bind` user inside container**
+
+The official `internetsystemsconsortium/bind9` container runs as UID/GID **53:53** (bind user).
+
+```bash
+chown -R 53:53 /opt/named
+chmod -R 750 /opt/named
+```
+
+---
+
+## **3️⃣ named.conf (master config)**
+
+Save this as:
+
+```
+vim /opt/named/config/named.conf
+```
+
+```conf
+options {
+    directory "/var/named";
+    listen-on { 127.0.0.1; 172.16.30.48; 172.16.32.48; };
+    listen-on-v6 { none; };
+    allow-query { any; };
+    recursion yes;
+    allow-transfer { 172.16.31.48; }; // Slave IP
+    dnssec-validation yes;
+    auth-nxdomain no;
+    pid-file "/var/run/named/named.pid";
+};
+
+zone "blue.lab" IN {
+    type master;
+    file "fwd.blue.lab";
+    allow-transfer { 172.16.31.48; };
+};
+
+zone "30.16.172.in-addr.arpa" IN {
+    type master;
+    file "rev.172.16.30";
+    allow-transfer { 172.16.31.48; };
+};
+
+zone "32.16.172.in-addr.arpa" IN {
+    type master;
+    file "rev.172.16.32";
+    allow-transfer { 172.16.31.48; };
+};
+```
+
+---
+
+## **4️⃣ Forward zone file**
+
+Save as:
+
+```
+vim /opt/named/zones/fwd.blue.lab
+```
+
+```dns
+$TTL 86400
+$ORIGIN blue.lab.
+
+@   IN SOA ns1.blue.lab. dnsadmin.blue.lab. (
+        2025080301  ; Serial
+        3600        ; Refresh
+        900         ; Retry
+        604800      ; Expire
+        86400 )     ; Minimum
+
+    IN NS ns1.blue.lab.
+    IN NS ns2.blue.lab.
+
+ns1 IN A 172.16.30.48
+ns2 IN A 172.16.31.48
+
+www1    IN A 172.16.30.48
+www2    IN A 172.16.30.48
+secure  IN A 172.16.32.48
+```
+
+---
+
+## **5️⃣ Reverse zone for 172.16.30**
+
+Save as:
+
+```
+vim /opt/named/zones/rev.172.16.30
+```
+
+```dns
+$TTL 86400
+$ORIGIN 30.16.172.in-addr.arpa.
+
+@   IN SOA ns1.blue.lab. dnsadmin.blue.lab. (
+        2025080301
+        3600
+        900
+        604800
+        86400 )
+
+    IN NS ns1.blue.lab.
+    IN NS ns2.blue.lab.
+
+48 IN PTR ns1.blue.lab.
+48 IN PTR www1.blue.lab.
+48 IN PTR www2.blue.lab.
+```
+
+---
+
+## **6️⃣ Reverse zone for 172.16.32**
+
+Save as:
+
+```
+vim /opt/named/zones/rev.172.16.32
+```
+
+```dns
+$TTL 86400
+$ORIGIN 32.16.172.in-addr.arpa.
+
+@   IN SOA ns1.blue.lab. dnsadmin.blue.lab. (
+        2025080301
+        3600
+        900
+        604800
+        86400 )
+
+    IN NS ns1.blue.lab.
+    IN NS ns2.blue.lab.
+
+48 IN PTR secure.blue.lab.
+```
+
+## **8️⃣ Verify**
+
+```bash
+dig @172.16.30.48 www1.blue.lab
+dig @172.16.32.48 www1.blue.lab
+dig -x 172.16.30.48 @172.16.30.48
+```
+
+

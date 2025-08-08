@@ -1,0 +1,16 @@
+$TTL 86400
+@   IN SOA {{ name_server }}1.{{ bind_domain }}. dnsadmin.{{ bind_domain }}. (
+        {{ bind_serial }}
+        3600
+        1800
+        604800
+        86400
+)
+
+    IN NS {{ name_server }}1.{{ bind_domain }}.
+    IN NS {{ name_server }}2.{{ bind_domain }}.
+
+{% for record in bind_ptr %}
+{{ record.octet }} IN PTR {{ record.fqdn }}
+{% endfor %}
+

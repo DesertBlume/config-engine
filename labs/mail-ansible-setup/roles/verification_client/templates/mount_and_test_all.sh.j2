@@ -1,0 +1,53 @@
+#!/bin/bash
+
+echo "== Creating mount points =="
+mkdir -p /mnt/pub-u1 /mnt/priv-u1 /mnt/pub-u2 /mnt/priv-u2 /mnt/nfs
+
+echo "== Mounting Samba shares (with full client-side permissions) =="
+mount -t cifs //172.16.30.48/samba-public  /mnt/pub-u1 \
+    -o username=user1,password=user1,file_mode=0777,dir_mode=0777
+
+mount -t cifs //172.16.30.48/samba-private /mnt/priv-u1 \
+    -o username=user1,password=user1,file_mode=0777,dir_mode=0777
+
+mount -t cifs //172.16.30.48/samba-public  /mnt/pub-u2 \
+    -o username=user2,password=user2,file_mode=0777,dir_mode=0777
+
+mount -t cifs //172.16.30.48/samba-private /mnt/priv-u2 \
+    -o username=user2,password=user2,file_mode=0777,dir_mode=0777
+
+echo "== Mounting NFS share =="
+mount -t nfs 172.16.30.48:/srv/nfs /mnt/nfs
+
+echo "== Writing to shares =="
+
+echo "Hello from user1 public"  > /mnt/pub-u1/u1_pub.txt
+echo "Hello from user1 private" > /mnt/priv-u1/u1_priv.txt
+
+echo "Hello from user2 public"  > /mnt/pub-u2/u2_pub.txt
+
+echo "Trying to write as user2 to private (should fail)"
+echo "Hello from user2 private" > /mnt/priv-u2/u2_priv.txt 2>/mnt/priv-u2/u2_priv_error.log \
+    || echo "Permission denied as expected"
+
+echo "Writing to NFS"
+echo "Hello from NFS client" > /mnt/nfs/nfs_test.txt
+
+echo "== Results =="
+echo "--- /mnt/pub-u1/u1_pub.txt ---"
+cat /mnt/pub-u1/u1_pub.txt
+
+echo "--- /mnt/priv-u1/u1_priv.txt ---"
+cat /mnt/priv-u1/u1_priv.txt
+
+echo "--- /mnt/pub-u2/u2_pub.txt ---"
+cat /mnt/pub-u2/u2_pub.txt
+
+echo "--- /mnt/priv-u2/u2_priv.txt (should fail or be empty) ---"
+cat /mnt/priv-u2/u2_priv.txt 2>/dev/null || echo "[Failed to read]"
+
+echo "--- /mnt/nfs/nfs_test.txt ---"
+cat /mnt/nfs/nfs_test.txt
+
+echo "== Done =="
+

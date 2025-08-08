@@ -1,0 +1,4 @@
+---
+- name: Export NFS Shares
+  command: exportfs -ra
+

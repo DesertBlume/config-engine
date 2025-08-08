@@ -1,0 +1,109 @@
+desertblume$ ssh root 
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Register this system with Red Hat Insights: insights-client --register
+Create an account or view all your systems at https://red.ht/insights-dashboard
+Last login: Thu Aug  7 11:57:11 2025 from 172.16.0.1
+[root@haja0013-SBA ~]# cat /srv/nfs/
+nfs_test.txt  readme.nfs    
+[root@haja0013-SBA ~]# cat /srv/nfs/nfs_test.txt 
+Hello from NFS client
+[root@haja0013-SBA ~]# cat /srv/nfs/readme.nfs 
+Created by Hmoad Hajali
+[root@haja0013-SBA ~]# car /home/ansible/verification.log 
+bash: car: command not found...
+^[[A^[[A^C
+[root@haja0013-SBA ~]# cat /home/ansible/verification.log 
+== Creating mount points ==
+
+=== Mounting Samba shares ===
+== Mounting NFS share ==
+mount.nfs: access denied by server while mounting 172.16.30.48:/srv/nfs
+== Writing to shares ==
+Trying to write as user2 to private (should fail)
+/home/ansible/verify_helper.sh: line 52: /mnt/priv-u2/u2_priv.txt: Permission denied
+Permission denied as expected
+Writing to NFS
+== Results ==
+--- /mnt/pub-u1/u1_pub.txt ---
+Hello from user1 public
+--- /mnt/priv-u1/u1_priv.txt ---
+Hello from user1 private
+--- /mnt/pub-u2/u2_pub.txt ---
+Hello from user2 public
+--- /mnt/priv-u2/u2_priv.txt (should fail or be empty) ---
+[Failed to read]
+--- /mnt/nfs/nfs_test.txt ---
+Hello from dont work server
+== iptables rules ==
+Chain INPUT (policy DROP 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+  305 48653 ACCEPT     all  --  lo     *       0.0.0.0/0            0.0.0.0/0           
+ 1381 2839K ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+    1    74 ACCEPT     all  --  *      *       172.16.31.0/24       0.0.0.0/0           
+    0     0 ACCEPT     all  --  *      *       172.16.0.0/24        0.0.0.0/0           
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:53
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:53
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:80
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:443
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:139
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:445
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:137
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:138
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:2049
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:2049
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:111
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:111
+    0     0 ACCEPT     tcp  --  *      *       172.16.0.0/16        0.0.0.0/0            tcp dpt:20048
+    0     0 ACCEPT     udp  --  *      *       172.16.0.0/16        0.0.0.0/0            udp dpt:20048
+
+Chain FORWARD (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+    0     0 ACCEPT     all  --  *      *       172.16.31.0/24       0.0.0.0/0           
+    0     0 ACCEPT     all  --  *      *       172.16.0.0/24        0.0.0.0/0           
+
+Chain OUTPUT (policy ACCEPT 0 packets, 0 bytes)
+ pkts bytes target     prot opt in     out     source               destination         
+ 1543  168K ACCEPT     all  --  *      *       0.0.0.0/0            0.0.0.0/0            ctstate RELATED,ESTABLISHED
+    0     0 ACCEPT     all  --  *      *       172.16.31.0/24       0.0.0.0/0           
+    0     0 ACCEPT     all  --  *      *       172.16.0.0/24        0.0.0.0/0           
+
+Chain LIBVIRT_INP (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain LIBVIRT_OUT (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain LIBVIRT_FWO (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain LIBVIRT_FWI (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+
+Chain LIBVIRT_FWX (0 references)
+ pkts bytes target     prot opt in     out     source               destination         
+== Done ==
+[root@haja0013-SBA ~]# ls /mnt/nfs/nfs_test.txt
+/mnt/nfs/nfs_test.txt
+[root@haja0013-SBA ~]# umount /mnt/nfs
+umount: /mnt/nfs: not mounted.
+[root@haja0013-SBA ~]# sudo mount -t nfs ${PRIMARY_IP}:${NFS_EXPORT} /mnt/nfs
+mount.nfs: Failed to resolve server : Name or service not known
+[root@haja0013-SBA ~]# sudo mount -t nfs 172.16.30.48:/srv/nfs /mnt/nfs
+[root@haja0013-SBA ~]# su foo
+[foo@haja0013-SBA root]$ cat /mnt/nfs/
+cat: /mnt/nfs/: Is a directory
+[foo@haja0013-SBA root]$ cat /mnt/nfs/*
+Hello from NFS client
+Created by Hmoad Hajali
+[foo@haja0013-SBA root]$ mkdir /mnt/nfs/hello
+mkdir: cannot create directory ‘/mnt/nfs/hello’: Read-only file system
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+[foo@haja0013-SBA root]$ 
+

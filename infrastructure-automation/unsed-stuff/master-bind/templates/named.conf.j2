@@ -1,0 +1,30 @@
+options {
+    directory "/var/named";
+    listen-on { {% for ip in bind_listen_ipv4 %} {{ ip }}; {% endfor %} };
+    listen-on-v6 { none; };
+    allow-query { any; };
+    recursion yes;
+    allow-transfer { {{ bind_slave_ip }}; };
+    dnssec-validation yes;
+    auth-nxdomain no;
+    pid-file "/var/run/named/named.pid";
+};
+
+zone "{{ bind_domain }}" IN {
+    type master;
+    file "fwd.{{ bind_domain }}";
+    allow-transfer { {{ bind_slave_ip }}; };
+};
+
+zone "30.16.172.in-addr.arpa" IN {
+    type master;
+    file "rev.172.16.30";
+    allow-transfer { {{ bind_slave_ip }}; };
+};
+
+zone "32.16.172.in-addr.arpa" IN {
+    type master;
+    file "rev.172.16.32";
+    allow-transfer { {{ bind_slave_ip }}; };
+};
+

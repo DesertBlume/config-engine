@@ -1,0 +1,13 @@
+- hosts: dns-masters
+  become: true
+  roles:
+    - common
+    - bind-master
+    - apache-blue
+    - samba
+    - nfs
+
+- hosts: dns-slaves
+  become: true
+  roles:
+    - bind_slave

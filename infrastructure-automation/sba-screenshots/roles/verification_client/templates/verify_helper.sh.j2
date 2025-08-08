@@ -1,0 +1,114 @@
+#!/bin/bash
+
+MAGIC="48"
+DOMAIN="yellow.lab"
+PRIMARY_IP="172.16.30.48"
+ALIAS_IP="172.16.32.48"
+NFS_EXPORT="/srv/nfs"
+
+USER1="user1"
+USER1_PASS="user1"
+USER2="user2"
+USER2_PASS="user2"
+
+# =============================
+echo "== Creating mount points =="
+# =============================
+mkdir -p /mnt/{pub-u1,priv-u1,pub-u2,priv-u2,nfs}
+
+# =============================
+echo "=== DNS Full Zone Transfer Check ==="
+# =============================
+echo "\$ dig @${PRIMARY_IP} ${DOMAIN} AXFR"
+dig @${PRIMARY_IP} ${DOMAIN} AXFR
+
+# =============================
+echo -e "\n=== Forward Lookup Check ==="
+echo "\$ dig www1.${DOMAIN}"
+dig www1.${DOMAIN} +norecurse
+
+# =============================
+echo -e "\n=== Reverse Lookup Check ==="
+echo "\$ dig -x ${PRIMARY_IP}"
+dig -x ${PRIMARY_IP} +norecurse
+
+# =============================
+echo -e "\n=== HTTP Test for www1.${DOMAIN} ==="
+echo "\$ curl -s http://www1.${DOMAIN}"
+curl -s http://www1.${DOMAIN}
+
+# =============================
+echo -e "\n=== HTTP Test for www2.${DOMAIN} ==="
+echo "\$ curl -s http://www2.${DOMAIN}"
+curl -s http://www2.${DOMAIN}
+
+# =============================
+echo -e "\n=== HTTPS Test for secure.${DOMAIN} ==="
+echo "\$ curl -sk https://secure.${DOMAIN}"
+curl -sk https://secure.${DOMAIN}
+
+# =============================
+echo -e "\n=== Mounting Samba shares ==="
+# =============================
+mount -t cifs //${PRIMARY_IP}/samba-public  /mnt/pub-u1 \
+    -o username=${USER1},password=${USER1_PASS},file_mode=0777,dir_mode=0777
+
+mount -t cifs //${PRIMARY_IP}/samba-private /mnt/priv-u1 \
+    -o username=${USER1},password=${USER1_PASS},file_mode=0777,dir_mode=0777
+
+mount -t cifs //${PRIMARY_IP}/samba-public  /mnt/pub-u2 \
+    -o username=${USER2},password=${USER2_PASS},file_mode=0777,dir_mode=0777
+
+mount -t cifs //${PRIMARY_IP}/samba-private /mnt/priv-u2 \
+    -o username=${USER2},password=${USER2_PASS},file_mode=0777,dir_mode=0777
+
+# =============================
+echo "== Mounting NFS share =="
+# =============================
+mount -t nfs ${PRIMARY_IP}:${NFS_EXPORT} /mnt/nfs
+
+# =============================
+echo "== Writing to shares =="
+# =============================
+echo "Hello from ${USER1} public"  > /mnt/pub-u1/u1_pub.txt
+echo "Hello from ${USER1} private" > /mnt/priv-u1/u1_priv.txt
+echo "Hello from ${USER2} public"  > /mnt/pub-u2/u2_pub.txt
+
+echo "Trying to write as ${USER2} to private (should fail)"
+echo "Hello from ${USER2} private" > /mnt/priv-u2/u2_priv.txt 2>/mnt/priv-u2/u2_priv_error.log \
+    || echo "Permission denied as expected"
+
+echo "Writing to NFS"
+echo "Hello from NFS client" > /mnt/nfs/nfs_test.txt
+
+# =============================
+echo "== Results =="
+# =============================
+echo "--- /mnt/pub-u1/u1_pub.txt ---"
+cat /mnt/pub-u1/u1_pub.txt
+
+echo "--- /mnt/priv-u1/u1_priv.txt ---"
+cat /mnt/priv-u1/u1_priv.txt
+
+echo "--- /mnt/pub-u2/u2_pub.txt ---"
+cat /mnt/pub-u2/u2_pub.txt
+
+echo "--- /mnt/priv-u2/u2_priv.txt (should fail or be empty) ---"
+cat /mnt/priv-u2/u2_priv.txt 2>/dev/null || echo "[Failed to read]"
+
+echo "--- /mnt/nfs/nfs_test.txt ---"
+cat /mnt/nfs/nfs_test.txt
+
+ls /opt/named/slaves/
+cat /opt/named/slaves/*
+rm -rf /opt/named/slaves/*
+ls /opt/named/slaves/
+podman restart bind-slave
+
+sleep 3
+
+
+cat /opt/named/slaves/*
+
+echo "== Done =="
+

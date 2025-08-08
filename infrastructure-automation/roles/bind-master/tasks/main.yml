@@ -1,0 +1,70 @@
+- name: Ensure bind directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ bind_uid }}"
+    group: "{{ bind_gid }}"
+    mode: '0750'
+  loop:
+    - "{{ bind_dir }}/config"
+    - "{{ bind_dir }}/zones"
+
+- name: Deploy named.conf
+  ansible.builtin.template:
+    src: named.conf.j2
+    dest: "{{ bind_dir }}/config/named.conf"
+    owner: "{{ bind_uid }}"
+    group: "{{ bind_gid }}"
+    mode: '0640'
+
+- name: Download bind9 image from host machine
+  ansible.builtin.get_url:
+    url: "http://{{ host_machine_ip }}:8080/bind9.tar"
+    dest: /root/bind9.tar
+    mode: '0640'
+
+- name: Load bind9 image into Podman
+  ansible.builtin.command: podman load -i /root/bind9.tar
+  register: podman_load
+  changed_when: "'Loaded image' in podman_load.stdout"
+
+- name: Deploy forward zone file
+  template:
+    src: "fwd.zone.j2"
+    dest: "{{ bind_dir }}/zones/fwd.{{ bind_domain }}"
+    owner: "{{ bind_uid }}"
+    group: "{{ bind_gid }}"
+    mode: '0640'
+
+- name: Deploy reverse zone file
+  template:
+    src: "rev.16.172.j2"
+    dest: "{{ bind_dir }}/zones/rev.16.172"
+    owner: "{{ bind_uid }}"
+    group: "{{ bind_gid }}"
+    mode: '0640'
+
+- name: Remove existing bind-master container (if exists)
+  containers.podman.podman_container:
+    name: bind-master
+    state: absent
+
+- name: Run bind-master container
+  containers.podman.podman_container:
+    name: bind-master
+    image: "{{ bind_image }}"
+    state: started
+    recreate: true
+    hostname: bind-master
+    network: host
+    volume:
+      - /opt/named/config/named.conf:/etc/named.conf:Z
+      - /opt/named/zones:/var/named:Z
+    command:
+      - -c
+      - /etc/named.conf
+      - -g
+      - -u
+      - bind
+
+

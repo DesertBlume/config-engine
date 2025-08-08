@@ -1,0 +1,90 @@
+# roles/pre_ssh_hardening/tasks/main.yml
+
+- name: Install sshpass on client
+  package:
+    name: sshpass
+    state: present
+  delegate_to: haja0013-CTL
+  become: yes
+  run_once: true
+
+- name: Remove stale host key for 172.16.30.48 from known_hosts (cst8246)
+  ansible.builtin.shell: |
+    if [ -f /home/cst8246/.ssh/known_hosts ]; then
+      ssh-keygen -R 172.16.30.48
+    fi
+  become: yes
+  become_user: cst8246
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Remove stale host key for 172.16.30.48 from known_hosts (root)
+  ansible.builtin.shell: |
+    if [ -f /root/.ssh/known_hosts ]; then
+      ssh-keygen -R 172.16.30.48
+    fi
+  become: yes
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Generate SSH key for cst8246
+  become: yes
+  become_user: cst8246
+  openssh_keypair:
+    path: /home/cst8246/.ssh/id_rsa
+    type: rsa
+    size: 2048
+    mode: '0600'
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Generate SSH key for root on client
+  become: yes
+  openssh_keypair:
+    path: /root/.ssh/id_rsa
+    type: rsa
+    size: 2048
+    mode: '0600'
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send cst8246's key to foo on the server
+  ansible.builtin.shell: sshpass -p 'bar' ssh-copy-id -o StrictHostKeyChecking=no foo@172.16.30.48
+  become: yes
+  become_user: cst8246
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send cst8246's key to root on the server
+  ansible.builtin.shell: sshpass -p 'abc' ssh-copy-id -o StrictHostKeyChecking=no root@172.16.30.48
+  become: yes
+  become_user: cst8246
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send cst8246's key to Thursday on the server
+  ansible.builtin.shell: sshpass -p '123' ssh-copy-id -o StrictHostKeyChecking=no Thursday@172.16.30.48
+  become: yes
+  become_user: cst8246
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send root's key to foo on the server
+  ansible.builtin.shell: sshpass -p 'bar' ssh-copy-id -o StrictHostKeyChecking=no foo@172.16.30.48
+  become: yes
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send root's key to root on the server
+  ansible.builtin.shell: sshpass -p 'abc' ssh-copy-id -o StrictHostKeyChecking=no root@172.16.30.48
+  become: yes
+  delegate_to: haja0013-CTL
+  run_once: true
+
+- name: Send root's key to Thursday on the server
+  ansible.builtin.shell: sshpass -p '123' ssh-copy-id -o StrictHostKeyChecking=no Thursday@172.16.30.48
+  become: yes
+  delegate_to: haja0013-CTL
+  run_once: true
+
+

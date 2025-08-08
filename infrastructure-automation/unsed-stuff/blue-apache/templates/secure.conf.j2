@@ -1,0 +1,9 @@
+<VirtualHost {{ apache_alias_ip }}:443>
+    ServerName secure.{{ bind_domain }}
+    DocumentRoot /usr/local/apache2/htdocs/secure
+
+    SSLEngine on
+    SSLCertificateFile /usr/local/apache2/conf/ssl/secure.crt
+    SSLCertificateKeyFile /usr/local/apache2/conf/ssl/secure.key
+</VirtualHost>
+

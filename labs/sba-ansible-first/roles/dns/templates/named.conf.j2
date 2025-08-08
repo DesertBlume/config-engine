@@ -1,0 +1,26 @@
+
+options {
+	listen-on port 53 { 127.0.0.1; 172.16.30.48; 172.16.32.48; };
+    directory "/var/named";
+    recursion yes;
+    allow-query { localhost; 172.16.0.0/16 };;
+    allow-transfer { 172.16.31.0/24; };
+};
+
+zone "{{ dns_zone }}" IN {
+    type {{ 'master' if inventory_hostname == 'haja0013-SRV' else 'slave' }};
+    file "{{ 'labtest.lab.zone' if inventory_hostname == 'haja0013-SRV' else 'slaves/labtest.lab.zone' }}";
+    {% if inventory_hostname != 'haja0013-SRV' %}
+    masters { 172.16.30.48; };  # Replace with actual master IP
+    {% endif %}
+};
+
+zone "16.172.in-addr.arpa" IN {
+    type {{ 'master' if inventory_hostname == 'haja0013-SRV' else 'slave' }};
+    file "{{ '16.rev.zone' if inventory_hostname == 'haja0013-SRV' else 'slaves/16.rev.zone' }}";
+    {% if inventory_hostname != 'haja0013-SRV' %}
+    masters { 172.16.30.48; };
+    {% endif %}
+};
+
+

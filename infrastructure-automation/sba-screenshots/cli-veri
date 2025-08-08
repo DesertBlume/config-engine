@@ -1,0 +1,161 @@
+Activate the web console with: systemctl enable --now cockpit.socket
+
+Register this system with Red Hat Insights: insights-client --register
+Create an account or view all your systems at https://red.ht/insights-dashboard
+Last login: Sun Aug  3 15:44:16 2025 from 172.16.0.1
+[cst8246@haja0013-CLT ~]$ sudo -i
+[root@haja0013-CLT ~]# cat verification.log 
+== Creating mount points ==
+=== DNS Full Zone Transfer Check ===
+$ dig @172.16.30.48 yellow.lab AXFR
+
+; <<>> DiG 9.11.36-RedHat-9.11.36-16.el8_10.4 <<>> @172.16.30.48 yellow.lab AXFR
+; (1 server found)
+;; global options: +cmd
+yellow.lab.		86400	IN	SOA	nx1.yellow.lab. dnsadmin.yellow.lab. 2025080701 3600 1800 604800 86400
+yellow.lab.		86400	IN	NS	nx1.yellow.lab.
+yellow.lab.		86400	IN	NS	nx2.yellow.lab.
+nx1.yellow.lab.		86400	IN	A	172.16.30.48
+nx2.yellow.lab.		86400	IN	A	172.16.32.48
+secure.yellow.lab.	86400	IN	A	172.16.32.48
+www1.yellow.lab.	86400	IN	A	172.16.30.48
+www2.yellow.lab.	86400	IN	A	172.16.30.48
+yellow.lab.		86400	IN	SOA	nx1.yellow.lab. dnsadmin.yellow.lab. 2025080701 3600 1800 604800 86400
+;; Query time: 0 msec
+;; SERVER: 172.16.30.48#53(172.16.30.48)
+;; WHEN: Thu Aug 07 12:00:24 EDT 2025
+;; XFR size: 9 records (messages 1, bytes 281)
+
+
+=== Forward Lookup Check ===
+$ dig www1.yellow.lab
+
+; <<>> DiG 9.11.36-RedHat-9.11.36-16.el8_10.4 <<>> www1.yellow.lab +norecurse
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 40996
+;; flags: qr aa ra; QUERY: 1, ANSWER: 1, AUTHORITY: 2, ADDITIONAL: 3
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 84209dd2a1b87bb2010000006894cd98e06962f375c829e8 (good)
+;; QUESTION SECTION:
+;www1.yellow.lab.		IN	A
+
+;; ANSWER SECTION:
+www1.yellow.lab.	86400	IN	A	172.16.30.48
+
+;; AUTHORITY SECTION:
+yellow.lab.		86400	IN	NS	nx1.yellow.lab.
+yellow.lab.		86400	IN	NS	nx2.yellow.lab.
+
+;; ADDITIONAL SECTION:
+nx1.yellow.lab.		86400	IN	A	172.16.30.48
+nx2.yellow.lab.		86400	IN	A	172.16.32.48
+
+;; Query time: 0 msec
+;; SERVER: 172.16.30.48#53(172.16.30.48)
+;; WHEN: Thu Aug 07 12:00:24 EDT 2025
+;; MSG SIZE  rcvd: 156
+
+
+=== Reverse Lookup Check ===
+$ dig -x 172.16.30.48
+
+; <<>> DiG 9.11.36-RedHat-9.11.36-16.el8_10.4 <<>> -x 172.16.30.48 +norecurse
+;; global options: +cmd
+;; Got answer:
+;; ->>HEADER<<- opcode: QUERY, status: NOERROR, id: 36236
+;; flags: qr aa ra; QUERY: 1, ANSWER: 3, AUTHORITY: 2, ADDITIONAL: 1
+
+;; OPT PSEUDOSECTION:
+; EDNS: version: 0, flags:; udp: 1232
+; COOKIE: 55d86152949610f9010000006894cd983277089cc2f58842 (good)
+;; QUESTION SECTION:
+;48.30.16.172.in-addr.arpa.	IN	PTR
+
+;; ANSWER SECTION:
+48.30.16.172.in-addr.arpa. 86400 IN	PTR	www2.yellow.lab.
+48.30.16.172.in-addr.arpa. 86400 IN	PTR	nx1.yellow.lab.
+48.30.16.172.in-addr.arpa. 86400 IN	PTR	www1.yellow.lab.
+
+;; AUTHORITY SECTION:
+16.172.in-addr.arpa.	86400	IN	NS	nx2.yellow.lab.
+16.172.in-addr.arpa.	86400	IN	NS	nx1.yellow.lab.
+
+;; Query time: 0 msec
+;; SERVER: 172.16.30.48#53(172.16.30.48)
+;; WHEN: Thu Aug 07 12:00:24 EDT 2025
+;; MSG SIZE  rcvd: 199
+
+
+=== HTTP Test for www1.yellow.lab ===
+$ curl -s http://www1.yellow.lab
+<h1>MAGIC#48 - www1.yellow.lab</h1>
+
+
+=== HTTP Test for www2.yellow.lab ===
+$ curl -s http://www2.yellow.lab
+<h1>MAGIC#48 - www2.yellow.lab</h1>
+
+
+=== HTTPS Test for secure.yellow.lab ===
+$ curl -sk https://secure.yellow.lab
+<h1>MAGIC#48 - secure.yellow.lab</h1>
+
+
+=== Mounting Samba shares ===
+== Mounting NFS share ==
+== Writing to shares ==
+Trying to write as user2 to private (should fail)
+/usr/local/bin/verify_helper.sh: line 78: /mnt/priv-u2/u2_priv.txt: Permission denied
+Permission denied as expected
+Writing to NFS
+== Results ==
+--- /mnt/pub-u1/u1_pub.txt ---
+Hello from user1 public
+--- /mnt/priv-u1/u1_priv.txt ---
+Hello from user1 private
+--- /mnt/pub-u2/u2_pub.txt ---
+Hello from user2 public
+--- /mnt/priv-u2/u2_priv.txt (should fail or be empty) ---
+[Failed to read]
+--- /mnt/nfs/nfs_test.txt ---
+Hello from NFS client
+fwd.yellow.lab
+rev.16.172
+h�͖[Q�
+     yellowlab9nx1yellowladnsadminyellowlabx�G} :�Q�DQ�
+                                                       yellowlabnx1yellowlabnx2yellowlab*Q�nx1yellowlab�0*Q�nx2yellowlab� 0-Q�secureyellowlab� 0+Q�www1yellowlab�0+Q�www2yellowlab�0h�͕dQ�16172in-addrarpa9nx1yellowladnsadminyellowlabx�G}  :�Q�MQ�16172in-addrarpanx1yellowlabnx2yellowlabg
+  Q�83016172in-addrarpanx1yellowlabwww1yellowlabwww2yellowlabV
+                                                              Q�83216172in-addrarpanx2yellowlabsecureyellowlabbind-slave
+h�͛[Q�
+     yellowlab9nx1yellowladnsadminyellowlabx�G} :�Q�DQ�
+                                                       yellowlabnx1yellowlabnx2yellowlab*Q�nx1yellowlab�0*Q�nx2yellowlab� 0-Q�secureyellowlab� 0+Q�www1yellowlab�0+Q�www2yellowlab�0h�͛dQ�16172in-addrarpa9nx1yellowladnsadminyellowlabx�G}  :�Q�MQ�16172in-addrarpanx1yellowlabnx2yellowlabg
+  Q�83016172in-addrarpanx1yellowlabwww1yellowlabwww2yellowlabV
+                                                              Q�83216172in-addrarpanx2yellowlabsecureyellowlab== Done ==
+[root@haja0013-CLT ~]# ls /mnt/priv-u1/
+u1_priv.txt
+[root@haja0013-CLT ~]# echo "hello" >> /mnt/priv-u1/u1_priv.txt 
+[root@haja0013-CLT ~]# ls /mnt/nfs/
+nfs_test.txt  readme.nfs
+[root@haja0013-CLT ~]# df -h
+Filesystem                    Size  Used Avail Use% Mounted on
+devtmpfs                      861M     0  861M   0% /dev
+tmpfs                         890M   84K  890M   1% /dev/shm
+tmpfs                         890M   18M  872M   2% /run
+tmpfs                         890M     0  890M   0% /sys/fs/cgroup
+/dev/mapper/rhel-root          17G  7.3G  9.7G  43% /
+/dev/sda1                    1014M  307M  708M  31% /boot
+tmpfs                         178M   12K  178M   1% /run/user/42
+shm                            63M     0   63M   0% /var/lib/containers/storage/overlay-containers/1fe03299caade28cf5a841753b66e4c6fdafeaac2a2fc450b667fa3ba1d444c9/userdata/shm
+overlay                        17G  7.3G  9.7G  43% /var/lib/containers/storage/overlay/08e20b05bb00aee4ff025bd24e3ddb78f5d87b3e209b7411804436ba86abf939/merged
+//172.16.30.48/samba-public    35G  6.7G   29G  20% /mnt/pub-u1
+//172.16.30.48/samba-private   35G  6.7G   29G  20% /mnt/priv-u1
+//172.16.30.48/samba-public    35G  6.7G   29G  20% /mnt/pub-u2
+//172.16.30.48/samba-private   35G  6.7G   29G  20% /mnt/priv-u2
+172.16.30.48:/srv/nfs          35G  6.7G   29G  20% /mnt/nfs
+tmpfs                         178M  4.0K  178M   1% /run/user/1000
+[root@haja0013-CLT ~]# 
+
+

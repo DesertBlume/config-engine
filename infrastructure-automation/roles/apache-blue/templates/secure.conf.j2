@@ -1,0 +1,9 @@
+<VirtualHost {{ site_ip }}:{{ site_port }}>
+    ServerName {{ site_name }}.{{ bind_domain }}
+    DocumentRoot /usr/local/apache2/htdocs/{{ site_name }}
+
+    SSLEngine on
+    SSLCertificateFile /usr/local/apache2/conf/ssl/{{ site_name }}.crt
+    SSLCertificateKeyFile /usr/local/apache2/conf/ssl/{{ site_name }}.key
+</VirtualHost>
+

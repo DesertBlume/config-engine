@@ -1,0 +1,11 @@
+- name: Apply full configuration to all hosts
+  hosts: all
+  become: true
+  roles:
+    - common
+    - pre_ssh_hardening
+    - ssh
+    - iptables
+    - nc
+    - dns
+

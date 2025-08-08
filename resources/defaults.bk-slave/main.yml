@@ -1,0 +1,6 @@
+bind_image: docker.io/internetsystemsconsortium/bind9:9.18
+bind_slave_dir: /opt/named
+bind_slave_ip: 172.16.31.48
+bind_master_ip: 172.16.30.48
+host_machine_ip: 172.16.0.1   # Change to your Ubuntu host IP
+

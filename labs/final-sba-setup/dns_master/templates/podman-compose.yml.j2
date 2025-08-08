@@ -1,0 +1,17 @@
+version: "3.8"
+services:
+  dns-master:
+    image: docker.io/internetsystemsconsortium/bind9:9.20
+    container_name: dns-master
+    restart: always
+    ports:
+      - "53:53/udp"
+      - "53:53/tcp"
+      - "127.0.0.1:953:953/tcp"   # RNDC control channel
+    volumes:
+      - ./config:/etc/bind
+      - ./cache:/var/cache/bind
+      - ./lib:/var/lib/bind
+      - ./log:/var/log
+    network_mode: host
+

@@ -1,0 +1,10 @@
+- hosts: dns-masters
+  become: true
+  roles:
+    - master-bind
+
+
+- hosts: dns-slaves
+  become: true
+  roles:
+    - bind_slave

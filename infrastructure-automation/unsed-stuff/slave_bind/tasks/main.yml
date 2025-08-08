@@ -1,0 +1,51 @@
+- name: Ensure bind directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: 53
+    group: 53
+    mode: '0750'
+  loop:
+    - "{{ bind_slave_dir }}/config"
+    - "{{ bind_slave_dir }}/zones"
+    - "{{ bind_slave_dir }}/slaves"
+
+- name: Deploy named.conf
+  ansible.builtin.template:
+    src: named.conf.j2
+    dest: "{{ bind_slave_dir }}/config/named.conf"
+    owner: 53
+    group: 53
+    mode: '0640'
+
+- name: Download bind9 image from host machine
+  ansible.builtin.get_url:
+    url: "http://{{ host_machine_ip }}:8080/bind9.tar"
+    dest: /root/bind9.tar
+    mode: '0644'
+
+- name: Load bind9 image into Podman
+  ansible.builtin.command: podman load -i /root/bind9.tar
+  register: podman_load
+  changed_when: "'Loaded image' in podman_load.stdout"
+
+- name: Remove old bind-slave container if exists
+  containers.podman.podman_container:
+    name: bind-slave
+    state: absent
+    
+
+- name: Run bind slave container
+  containers.podman.podman_container:
+    name: bind-slave
+    image: "{{ bind_image }}"
+    state: started
+    restart_policy: always
+    hostname: bind-slave
+    network: host
+    volumes:
+      - "{{ bind_slave_dir }}/config/named.conf:/etc/named.conf:Z"
+      - "{{ bind_slave_dir }}/zones:/var/named:Z"
+      - "{{ bind_slave_dir }}/slaves:/var/named/slaves:Z"
+    command: ["-c", "/etc/named.conf", "-g", "-u", "bind"]
+

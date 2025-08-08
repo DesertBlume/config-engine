@@ -1,0 +1,154 @@
+=== ./group_vars/all.yml ===
+# Domain settings
+dns_domain: "blue.lab"
+dns_zone_file: "fwd.blue.lab.zone"
+dns_reverse_zone: "16.172.in-addr.arpa"
+dns_reverse_file: "rev.blue.lab.zone"
+
+# IP settings
+server_main_ip: "172.16.30.48"
+server_alias_ip: "172.16.32.48"
+client_ip: "172.16.31.48"
+
+# Named config paths
+named_conf: "/etc/named.conf"
+zones_dir: "/var/named"
+
+# DNS nameservers
+dns1: "172.16.30.48"
+dns2: "172.16.32.48"
+
+=== ./output.txt ===
+=== ./roles/bind/templates/fwd.example48.lab.j2 ===
+$TTL 86400
+$ORIGIN {{ domain_ex }}.
+
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+        IN NS ns2.{{ domain_ex }}.
+	IN MX 10 {{ mail_hostname }}.
+
+
+ns1     IN A {{ srv_ip }}
+ns2     IN A {{ cli_ip }}
+ftp     IN A {{ alias_ip }}
+secure  IN A {{ alias_ip }}
+www     IN A {{ srv_ip }}
+mail	IN A {{ mailserver_ip }}
+webmail IN A {{ mailserver_ip }}
+=== ./roles/bind/templates/named.16.172.j2 ===
+$TTL 86400
+$ORIGIN 16.172.in-addr.arpa.
+
+@       IN SOA ns1.{{ domain_ex }}. dnsadmin.{{ domain_ex }}. (
+            20250710
+            28800
+            14400
+            604800
+            86400 )
+
+        IN NS   ns1.{{ domain_ex }}.
+        IN NS   ns2.{{ domain_ex }}.
+
+48.30   IN PTR ns1.{{ domain_ex }}.
+48.30   IN PTR www.{{ domain_ex }}.
+48.30   IN PTR www.{{ domain_site }}.
+48.31   IN PTR ns2.{{ domain_ex }}.
+48.32   IN PTR ftp.{{ domain_ex }}.
+48.32   IN PTR secure.{{ domain_ex }}.
+
+=== ./roles/bind/templates/zones.conf.j2 ===
+# Managed by Ansible - dynamic zones.conf
+
+{% for zone in zones %}
+zone "{{ zone.name }}" IN {
+  type master;
+  file "{{ zone.file }}";
+  allow-transfer { {{ ns2_ip }}; };  // allow zone transfers to slave
+  also-notify { {{ ns2_ip }}; };     // notify slave when zone changes
+  notify yes;
+  allow-update { none; };
+};
+{% endfor %}
+
+=== ./roles/bind/templates/fwd.site48.lab.j2 ===
+$TTL 86400
+$ORIGIN {{ domain_site }}.
+
+@       IN SOA {{ domain_site }}. dnsadmin.{{ domain_site }}. (
+                2025071001
+                30
+                14400
+                604800
+                86400 )
+
+        IN NS ns1.{{ domain_ex }}.
+
+
+ns1     IN A {{ srv_ip }}
+www     IN A {{ srv_ip }}
+
+=== ./roles/bind/tasks/main.yml ===
+- name: Install bind packages
+  package:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Deploy forward zone for example48.lab
+  template:
+    src: fwd.example48.lab.j2
+    dest: /var/named/fwd.example48.lab
+  notify: restart named
+
+- name: Deploy forward zone for site48.lab
+  template:
+    src: fwd.site48.lab.j2
+    dest: /var/named/fwd.site48.lab
+  notify: restart named
+
+- name: Deploy reverse zone
+  template:
+    src: named.16.172.j2
+    dest: /var/named/named.16.172
+  notify: restart named
+
+- name: Deploy zones.conf dynamically
+  template:
+    src: zones.conf.j2
+    dest: /etc/named/zones.conf
+  notify: restart named
+
+- name: Ensure zones.conf include is at the end of named.conf
+  lineinfile:
+    path: /etc/named.conf
+    line: 'include "/etc/named/zones.conf";'
+    insertafter: EOF
+    state: present
+  notify: restart named
+
+- name: Ensure named is running
+  service:
+    name: named
+    state: started
+    enabled: yes
+
+=== ./roles/bind/handlers/main.yml ===
+- name: restart named
+  service:
+    name: named
+    state: restarted
+
+=== ./all-cat.sh ===
+#!/bin/bash
+
+find . -type f -exec sh -c 'echo "=== {} ==="; cat "{}"' \; > output.txt
+
+tree

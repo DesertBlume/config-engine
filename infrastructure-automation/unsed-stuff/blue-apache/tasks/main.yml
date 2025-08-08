@@ -1,0 +1,62 @@
+- name: Create Apache directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ apache_conf_dir }}/sites"
+    - "{{ apache_docroot_dir }}/www1"
+    - "{{ apache_docroot_dir }}/www2"
+    - "{{ apache_docroot_dir }}/secure"
+    - "{{ apache_ssl_dir }}"
+
+- name: Deploy site index pages
+  copy:
+    src: "index-{{ item }}.html"
+    dest: "{{ apache_docroot_dir }}/{{ item }}/index.html"
+    mode: "0644"
+  loop:
+    - www1
+    - www2
+    - secure
+
+- name: Generate SSL key and cert for secure site
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout {{ apache_ssl_dir }}/secure.key
+    -out {{ apache_ssl_dir }}/secure.crt
+    -subj "/CN=secure.{{ bind_domain }}"
+  args:
+    creates: "{{ apache_ssl_dir }}/secure.crt"
+
+- name: Deploy Apache httpd.conf
+  template:
+    src: httpd.conf.j2
+    dest: "{{ apache_conf_dir }}/httpd.conf"
+    mode: "0644"
+
+- name: Deploy Apache vhost configs
+  template:
+    src: "{{ item.name }}.conf.j2"
+    dest: "{{ apache_sites_dir }}/{{ item.name }}.conf"
+    mode: "0644"
+  loop: "{{ apache_sites }}"
+
+- name: Remove old apache container
+  containers.podman.podman_container:
+    name: "{{ apache_container_name }}"
+    state: absent
+
+- name: Run apache container
+  containers.podman.podman_container:
+    name: "{{ apache_container_name }}"
+    image: "{{ apache_image }}"
+    state: started
+    recreate: yes
+    network: host
+    volume:
+      - "{{ apache_conf_dir }}/httpd.conf:/usr/local/apache2/conf/httpd.conf:Z"
+      - "{{ apache_sites_dir }}:/usr/local/apache2/conf/sites:Z"
+      - "{{ apache_docroot_dir }}:/usr/local/apache2/htdocs:Z"
+      - "{{ apache_ssl_dir }}:/usr/local/apache2/conf/ssl:Z"
+

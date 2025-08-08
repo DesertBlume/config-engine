@@ -1,0 +1,7 @@
+bind_primary_ip: "172.16.30.48"
+bind_alias_ip: "172.16.32.48"
+bind_slave_ip: "172.16.31.48"
+bind_domain: "blue.lab"
+bind_serial: "2025080301"
+bind_container_image: "docker.io/internetsystemsconsortium/bind9:9.18"
+

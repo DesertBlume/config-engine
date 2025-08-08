@@ -1,0 +1,147 @@
+- name: Install BIND and utilities
+  package:
+    name:
+      - bind
+      - bind-utils
+    state: present
+
+- name: Replace named.conf with custom version (master only)
+  copy:
+    dest: /etc/named.conf
+    content: |
+      //
+      // named.conf
+      //
+      // Provided by Red Hat bind package to configure the ISC BIND named(8) DNS
+      // server as a caching only nameserver (as a localhost DNS resolver only).
+      //
+      // See /usr/share/doc/bind*/sample/ for example named configuration files.
+      //
+
+      options {
+          listen-on port 53 { 127.0.0.1; 172.16.30.48; 172.16.32.48; };
+          listen-on-v6 port 53 { ::1; };
+          directory "/var/named";
+          dump-file "/var/named/data/cache_dump.db";
+          statistics-file "/var/named/data/named_stats.txt";
+          memstatistics-file "/var/named/data/named_mem_stats.txt";
+          secroots-file "/var/named/data/named.secroots";
+          recursing-file "/var/named/data/named.recursing";
+          allow-query { localhost; 172.16.0.0/16; };
+          allow-transfer { 172.16.31.48; };
+          recursion yes;
+          dnssec-enable yes;
+          dnssec-validation yes;
+          managed-keys-directory "/var/named/dynamic";
+          pid-file "/run/named/named.pid";
+          session-keyfile "/run/named/session.key";
+          include "/etc/crypto-policies/back-ends/bind.config";
+      };
+
+      zone "jupiter.lab" IN {
+          type master;
+          file "/var/named/fwd-jupiter.lab.zone";
+          allow-transfer { 172.16.31.48; };
+          also-notify { 172.16.31.48; };
+          notify yes;
+      };
+
+      zone "16.172.in-addr.arpa" IN {
+          type master;
+          file "/var/named/rev-16.172.zone";
+          allow-transfer { 172.16.31.48; };
+          also-notify { 172.16.31.48; };
+          notify yes;
+      };
+
+      include "/etc/named.rfc1912.zones";
+      include "/etc/named.root.key";
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Replace named.conf with custom version (slave only)
+  copy:
+    dest: /etc/named.conf
+    content: |
+      //
+      // named.conf
+      //
+      // Provided by Red Hat bind package to configure the ISC BIND named(8) DNS
+      // server as a caching only nameserver (as a localhost DNS resolver only).
+      //
+      // See /usr/share/doc/bind*/sample/ for example named configuration files.
+      //
+
+      options {
+          listen-on port 53 { 127.0.0.1; 172.16.31.48; };
+          listen-on-v6 port 53 { ::1; };
+          directory "/var/named";
+          dump-file "/var/named/data/cache_dump.db";
+          statistics-file "/var/named/data/named_stats.txt";
+          memstatistics-file "/var/named/data/named_mem_stats.txt";
+          secroots-file "/var/named/data/named.secroots";
+          recursing-file "/var/named/data/named.recursing";
+          allow-query { localhost; 172.16.0.0/16; };
+          recursion yes;
+          dnssec-enable yes;
+          dnssec-validation yes;
+          managed-keys-directory "/var/named/dynamic";
+          pid-file "/run/named/named.pid";
+          session-keyfile "/run/named/session.key";
+          include "/etc/crypto-policies/back-ends/bind.config";
+      };
+
+      zone "jupiter.lab" IN {
+          type slave;
+          masters { 172.16.30.48; };
+          file "slaves/slave.fwd-jupiter.lab.zone";
+      };
+
+      zone "16.172.in-addr.arpa" IN {
+          type slave;
+          masters { 172.16.30.48; };
+          file "slaves/slave.rev-16.172.zone";
+      };
+
+      include "/etc/named.rfc1912.zones";
+      include "/etc/named.root.key";
+  when: inventory_hostname == 'haja0013-CTL'
+
+- name: Deploy forward zone file for jupiter.lab (only on server/master)
+  template:
+    src: jupiter.lab.zone.j2
+    dest: /var/named/fwd-jupiter.lab.zone
+    owner: root
+    group: named
+    mode: '0644'
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Deploy reverse zone file for 172.16.30.48 and 172.16.32.48 (only on server/master)
+  template:
+    src: rev-16.172.zone.j2
+    dest: /var/named/rev-16.172.zone
+    owner: root
+    group: named
+    mode: '0644'
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Create slave zone directory (only on slave)
+  file:
+    path: /var/named/slaves
+    state: directory
+    owner: named
+    group: named
+    mode: '0755'
+  when: inventory_hostname == 'haja0013-CTL'
+
+- name: Ensure named service is enabled and started
+  service:
+    name: named
+    state: started
+    enabled: true
+
+- name: Ensure named service is restarted
+  service:
+    name: named
+    state: restarted
+
+

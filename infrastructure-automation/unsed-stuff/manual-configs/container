@@ -1,0 +1,9 @@
+podman run -d \
+  --name bind-master \
+  --hostname bind-master \
+  --network=host \
+  -v /opt/named/config/named.conf:/etc/named.conf \
+  -v /opt/named/zones:/var/named \
+  docker.io/internetsystemsconsortium/bind9:9.18 \
+  -c /etc/named.conf -g -u bind
+

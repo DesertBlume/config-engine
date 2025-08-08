@@ -1,0 +1,5 @@
+- hosts: dns-masters
+  become: true
+  roles:
+    - bind-master
+

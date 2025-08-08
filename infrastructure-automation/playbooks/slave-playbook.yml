@@ -1,0 +1,6 @@
+
+
+- hosts: dns-slaves
+  become: true
+  roles:
+    - bind_slave

@@ -1,0 +1,69 @@
+mkdir -p /opt/apache/{conf/sites,htdocs/{www1,www2,secure},ssl}
+
+
+echo "<h1>MAGIC#48 - www1.blue.lab</h1>" > /opt/apache/htdocs/www1/index.html
+echo "<h1>MAGIC#48 - www2.blue.lab</h1>" > /opt/apache/htdocs/www2/index.html
+echo "<h1>MAGIC#48 - secure.blue.lab</h1>" > /opt/apache/htdocs/secure/index.html
+
+vim /opt/apache/conf/sites/www1.conf
+
+<VirtualHost 172.16.30.48:80>
+    ServerName www1.blue.lab
+    DocumentRoot /usr/local/apache2/htdocs/www1
+</VirtualHost>
+
+
+
+vim /opt/apache/conf/sites/www2.conf
+
+<VirtualHost 172.16.30.48:80>
+    ServerName www2.blue.lab
+    DocumentRoot /usr/local/apache2/htdocs/www2
+</VirtualHost>
+
+
+vim /opt/apache/conf/sites/secure.conf
+
+<VirtualHost 172.16.32.48:443>
+    ServerName secure.blue.lab
+    DocumentRoot /usr/local/apache2/htdocs/secure
+
+    SSLEngine on
+    SSLCertificateFile /usr/local/apache2/conf/ssl/secure.crt
+    SSLCertificateKeyFile /usr/local/apache2/conf/ssl/secure.key
+</VirtualHost>
+
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+ -keyout /opt/apache/ssl/secure.key \
+ -out /opt/apache/ssl/secure.crt \
+ -subj "/CN=secure.blue.lab"
+
+
+podman rm -f apache-blue
+
+podman run -d \
+  --name apache-blue \
+  --hostname apache-blue \
+  --network host \
+  -v /opt/apache/conf/httpd.conf:/usr/local/apache2/conf/httpd.conf:Z \
+  -v /opt/apache/conf/sites:/usr/local/apache2/conf/sites:Z \
+  -v /opt/apache/htdocs:/usr/local/apache2/htdocs:Z \
+  -v /opt/apache/ssl:/usr/local/apache2/conf/ssl:Z \
+  docker.io/library/httpd:2.4
+
+
+
+podman exec -it apache-blue bash -c \
+'echo "IncludeOptional conf/sites/*.conf" >> /usr/local/apache2/conf/httpd.conf'
+
+
+
+podman restart apache-blue
+
+curl http://www1.blue.lab
+curl http://www2.blue.lab
+curl -k https://secure.blue.lab
+
+
+
+

@@ -1,6 +1,13 @@
-- name: Configure LDAP servers
+- name: Configure samba-NFS servers
   hosts: samba-NFS_servers
   become: true
   roles:
     - samba_server
+    - nfs_server
+
+- name: Configure samba-NFS clients
+  hosts: samba-NFS_clients
+  become: true
+  roles:
+    - verification_client
 

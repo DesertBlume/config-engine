@@ -1,0 +1,72 @@
+- name: Flush all iptables rules before applying new ones
+  command: iptables -F
+
+- name: Set iptables default policies to ACCEPT
+  command: iptables -P {{ item.chain }} ACCEPT
+  loop:
+    - { chain: 'INPUT' }
+    - { chain: 'FORWARD' }
+    - { chain: 'OUTPUT' }
+
+# ─────────────────────────────
+# 📧 Postfix (SMTP - Port 25)
+# ─────────────────────────────
+
+- name: Allow SMTP from server subnet ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ server_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow SMTP from client subnet ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ client_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Reject SMTP from blocked subnet ({{ blocked_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 25
+    source: "{{ blocked_network }}"
+    jump: REJECT
+    state: present
+
+# ─────────────────────────────
+# 🔐 LDAP (Port 389)
+# ─────────────────────────────
+
+- name: Allow LDAP from alias subnet ({{ alias_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ alias_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Allow LDAP from client subnet ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ client_network }}"
+    jump: ACCEPT
+    state: present
+
+- name: Reject LDAP from server subnet ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 389
+    source: "{{ server_network }}"
+    jump: REJECT
+    state: present
+

@@ -1,0 +1,97 @@
+# =============================
+# Global BIND DNS Configuration
+# =============================
+
+magic_number: "48"
+new_user: "thu"
+new_user_pass: "day"
+
+# Container Images
+bind_image: "docker.io/internetsystemsconsortium/bind9:9.18"
+bind_tar_file: "/root/bind9.tar"  # where the image tarball will be stored
+host_machine_ip: "172.16.0.1"     # your Ubuntu host IP (source for tarball)
+
+# Domain Info
+bind_domain: "yellow.lab"
+bind_dir: /opt/named
+bind_serial: "{{ '%Y%m%d01' | strftime }}"  # auto‑generate daily serial
+name_server: "nx"
+bind_uid: "53"
+bind_gid: "53"
+servername: "www1{{ bind_domain }}"
+
+
+# ips 
+primary_server_ip: "172.16.30.48"   # primary master IP
+alias_server_ip:  "172.16.32.48"   # master alias IP (for secure site)
+client_ip:  "172.16.31.48"   # slave IP
+full_network: "172.16.0.0/16"
+primary_server_network: "172.16.30.0/24"
+alias_server_network: "172.16.32.0/24"
+client_network: "172.16.31.0/24"
+
+
+# Listener Addresses
+bind_listen_ipv4:
+  - "127.0.0.1"
+  - "{{ primary_server_ip }}"
+  - "{{ alias_server_ip }}"
+
+# Forward Zone A Records
+bind_a_records:
+  - { name: "{{ name_server }}1",    ip: "{{ primary_server_ip }}" }
+  - { name: "{{ name_server }}2",    ip: "{{ alias_server_ip }}" }
+  - { name: "www1",   ip: "{{ primary_server_ip }}" }
+  - { name: "www2",   ip: "{{ primary_server_ip }}" }
+  - { name: "secure", ip: "{{ alias_server_ip }}" }
+
+# Reverse PTR Records
+bind_ptr:
+  - { octet: "48.30", fqdn: "{{ name_server  }}1.{{ bind_domain }}." }
+  - { octet: "48.32", fqdn: "{{ name_server  }}2.{{ bind_domain }}." }
+  - { octet: "48.30", fqdn: "www1.{{ bind_domain }}." }
+  - { octet: "48.30", fqdn: "www2.{{ bind_domain }}." }
+  - { octet: "48.32", fqdn: "secure.{{ bind_domain }}." }
+
+# Apache
+apache_image: "docker.io/library/httpd:2.4"
+apache_container_name: "apache-blue"
+apache_dir: "/opt/apache"
+apache_conf_dir: "{{ apache_dir }}/conf"
+apache_sites_dir: "{{ apache_conf_dir }}/sites"
+apache_docroot_dir: "{{ apache_dir }}/htdocs"
+apache_ssl_dir: "{{ apache_dir }}/ssl"
+
+apache_primary_ip: "{{ primary_server_ip }}"
+apache_alias_ip: "{{ alias_server_ip }}"
+
+apache_sites:
+  - { name: "www1", ip: "{{ apache_primary_ip }}", port: 80 }
+  - { name: "www2", ip: "{{ apache_primary_ip }}", port: 80 }
+  - { name: "secure", ip: "{{ apache_alias_ip }}", port: 443, ssl: true }
+
+
+
+# === SAMBA ===
+samba_packages:
+  - samba
+  - samba-client
+  - samba-common
+  - cifs-utils
+
+samba_public_path: /srv/samba/public
+samba_private_path: /srv/samba/private
+
+samba_valid_users:
+  - user1
+  - user2
+
+samba_write_users:
+  - user1
+
+# === NFS ===
+nfs_packages:
+  - nfs-utils
+
+nfs_path: /srv/nfs
+

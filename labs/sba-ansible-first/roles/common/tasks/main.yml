@@ -1,0 +1,9 @@
+- name: Create lab user with sudo (wheel) access
+  user:
+    name: Thursday
+    password: "{{ '123' | password_hash('sha512') }}"
+    groups: wheel
+    append: yes
+    update_password: on_create
+
+

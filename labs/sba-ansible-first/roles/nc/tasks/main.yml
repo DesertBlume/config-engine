@@ -1,0 +1,17 @@
+- name: Ensure nc is installed
+  package:
+    name: nmap-ncat
+    state: present
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Start netcat listener on port {{ netcat_port }}
+  shell: "nohup nc -lk {{ netcat_port }} > /tmp/nc.log 2>&1 & echo running > /tmp/nc_listener_started"
+  args:
+    creates: /tmp/nc_listener_started
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Ensure marker file exists (redundant safe fallback)
+  file:
+    path: /tmp/nc_listener_started
+    state: touch
+  when: inventory_hostname == 'haja0013-SRV'

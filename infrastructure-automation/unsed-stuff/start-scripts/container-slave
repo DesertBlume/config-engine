@@ -1,0 +1,68 @@
+## **1️⃣ Create directories on slave**
+
+```bash
+mkdir -p /opt/named/config
+mkdir -p /opt/named/zones
+mkdir -p /opt/named/slaves
+chown -R 53:53 /opt/named
+chmod -R 750 /opt/named
+```
+
+---
+
+## **2️⃣ Create `named.conf` for slave**
+
+```bash
+vim /opt/named/config/named.conf
+```
+
+```conf
+options {
+    directory "/var/named";
+    listen-on { 127.0.0.1; 172.16.31.48; };
+    listen-on-v6 { none; };
+    allow-query { any; };
+    recursion yes;
+    dnssec-validation yes;
+    auth-nxdomain no;
+    pid-file "/var/run/named/named.pid";
+};
+
+zone "blue.lab" IN {
+    type slave;
+    masters { 172.16.30.48; };
+    file "slaves/fwd.blue.lab";
+};
+
+zone "30.16.172.in-addr.arpa" IN {
+    type slave;
+    masters { 172.16.30.48; };
+    file "slaves/rev.172.16.30";
+};
+
+zone "32.16.172.in-addr.arpa" IN {
+    type slave;
+    masters { 172.16.30.48; };
+    file "slaves/rev.172.16.32";
+};
+```
+
+# On master (already working)
+podman pull docker.io/internetsystemsconsortium/bind9:9.18
+podman save docker.io/internetsystemsconsortium/bind9:9.18 -o bind9.tar
+
+# Copy to slave
+scp bind9.tar root@172.16.31.48:/root/
+
+# On slave
+podman load -i bind9.tar
+
+podman run -d \
+  --name bind-slave \
+  --hostname bind-slave \
+  --network=host \
+  -v /opt/named/config/named.conf:/etc/named.conf \
+  -v /opt/named/zones:/var/named \
+  -v /opt/named/slaves:/var/named/slaves \
+  docker.io/internetsystemsconsortium/bind9:9.18 \
+  -c /etc/named.conf -g -u bind

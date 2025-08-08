@@ -1,0 +1,59 @@
+- name: Flush iptables rules (master only)
+  command: iptables -F
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Set iptables default policies to ACCEPT (master only)
+  command: iptables -P {{ item.chain }} ACCEPT
+  loop:
+    - { chain: 'INPUT' }
+    - { chain: 'FORWARD' }
+    - { chain: 'OUTPUT' }
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Ensure iptables-services is installed
+  package:
+    name: iptables-services
+    state: present
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Allow TCP port {{ netcat_port }} from SERVER network ({{ server_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ server_network }}"
+    destination_port: "{{ netcat_port }}"
+    jump: ACCEPT
+    state: present
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Allow TCP port {{ netcat_port }} from ALIAS network ({{ alias_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ alias_network }}"
+    destination_port: "{{ netcat_port }}"
+    jump: ACCEPT
+    state: present
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Drop TCP port {{ netcat_port }} from CLIENT network ({{ client_network }})
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    source: "{{ client_network }}"
+    destination_port: "{{ netcat_port }}"
+    jump: REJECT
+    state: present
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Save iptables rules permanently (RHEL 8)
+  command: service iptables save
+  when: inventory_hostname == 'haja0013-SRV'
+
+- name: Enable and start iptables service
+  service:
+    name: iptables
+    enabled: true
+    state: started
+  when: inventory_hostname == 'haja0013-SRV'
+

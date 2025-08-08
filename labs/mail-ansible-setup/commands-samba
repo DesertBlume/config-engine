@@ -1,0 +1,4 @@
+sudo umount /mnt
+sudo mount -t cifs //172.16.30.48/samba-public /mnt \
+    -o username=user1,password=user1,file_mode=0777,dir_mode=0777
+sudo mount -o intr -t nfs 172.16.30.48:/srv/nfs /mnt

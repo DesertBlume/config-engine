@@ -1,0 +1,19 @@
+# Domain settings
+dns_domain: "blue.lab"
+dns_zone_file: "fwd.blue.lab.zone"
+dns_reverse_zone: "16.172.in-addr.arpa"
+dns_reverse_file: "rev.blue.lab.zone"
+
+# IP settings
+server_main_ip: "172.16.30.48"
+server_alias_ip: "172.16.32.48"
+client_ip: "172.16.31.48"
+
+# Named config paths
+named_conf: "/etc/named.conf"
+zones_dir: "/var/named"
+
+# DNS nameservers
+dns1: "172.16.30.48"
+dns2: "172.16.32.48"
+
